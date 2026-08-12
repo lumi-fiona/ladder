@@ -1,0 +1,1293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Ladder — Lumify</title>
+<style>
+  :root {
+    --bg: #0f0e0c; --panel: #171512; --panel-2: #1d1a16; --line: #2a261f;
+    --ink: #ece7dd; --muted: #8f8878; --mono: Consolas, 'Cascadia Mono', monospace;
+    --serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    --s: #d9a441; --a: #8fb47a; --b: #7d95b5; --c: #b5876d; --u: #57524a; --recheck: #d97f41;
+    /* --u is a SHAPE colour and nothing else: measured at 2.49:1 against the page, it fails text
+       contrast at any size. This file had already noticed once, in one place, and then a dozen
+       labels went on using it anyway. --dim is the tertiary TEXT grey — 4.60:1, a real step below
+       --muted's 5.48 — and every label, caption and footnote now takes it. Four graphic uses keep
+       --u on purpose: a history mark's fill, the level stripe, the ungraded section rule, and a
+       list marker. Nothing there is a word. */
+    --dim: #827b6d;
+    /* One spacing scale, 4-based. Before this the page used 12, 14, 16, 18, 20, 22, 26, 28 and 44
+       as one-offs, which is how everything ended up the same distance from everything else. */
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+    /* THE PAGE. Every block used to carry its own max-width (780, 860, 1020, 720, 640…), so on a
+       2560px screen the whole board sat in a 1020px column against the left edge with 1540px of
+       empty black beside it — measured, and the first thing its owner said about it. One centred
+       container now owns the width; prose still limits its own MEASURE, which is a different job. */
+    --page: 1680px; --pad: 48px;
+  }
+  * { box-sizing: border-box; }
+  .wrap { max-width: var(--page); margin: 0 auto; padding-inline: var(--pad); }
+  /* `hidden` is a presentation hint the browser applies with display:none — and ANY display rule of
+     our own outranks it. .board is display:flex, so switching views left the board on screen with
+     the roadmap underneath it. Stated once here so no future element can fall into it. */
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, 'Segoe UI', sans-serif; }
+  header { padding-block: var(--s7) var(--s5); border-bottom: 1px solid var(--line); }
+  h1 { font-family: var(--serif); font-size: 34px; font-weight: 500; margin: 0; letter-spacing: .01em; }
+  h1 em { font-style: normal; color: var(--s); }
+  .sub { color: var(--muted); margin-top: 6px; display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; }
+  .sub .mono { font-family: var(--mono); font-size: 12px; }
+  .hint { color: var(--recheck); }
+  /* THE RECORD. Big, warm, and made only of numbers this page counted itself. The type scale is the
+     one piece of loudness on a deliberately quiet board, and it is spent here on purpose: this is
+     the answer to "has any of that work amounted to anything", which is the question people actually
+     open a quality board carrying. */
+  /* The lede runs the width; the totals and the sentence about them share the row underneath. The
+     old cap of 27px made the four gold numbers the loudest thing on the page — squint at it and the
+     stats won, over a headline that is the actual answer to why anyone opened this. */
+  .record { margin-top: var(--s5); display: grid; gap: var(--s5) var(--s7); align-items: start; }
+  /* `auto 1fr`, not auto-fit: auto-fit found room for a THIRD column at this width and left it
+     empty, which is the same hole this pass exists to close. The totals take what they need and
+     the sentence about them takes the rest. */
+  @media (min-width: 1080px) { .record { grid-template-columns: auto minmax(0, 1fr); } }
+  .record .lede { grid-column: 1 / -1; font-family: var(--serif);
+                  font-size: clamp(26px, 3.2vw, 46px); font-weight: 500;
+                  color: var(--ink); margin: 0; letter-spacing: .01em; line-height: 1.18;
+                  max-width: 24ch; text-wrap: balance; }
+  .stats { display: flex; flex-wrap: wrap; gap: var(--s4) var(--s7); margin: 0; align-self: end; }
+  .stat .n { font-family: var(--serif); font-size: clamp(34px, 3vw, 44px); line-height: 1;
+             color: var(--s); display: block; font-weight: 500; }
+  .stat button.n { background: none; border: 0; padding: 0; cursor: pointer; font-weight: 500;
+                   transition: color .15s; }
+  .stat button.n:hover, .stat button.n:focus-visible { color: var(--ink); }
+  .stat .l { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+             color: var(--muted); display: block; margin-top: 9px; line-height: 1.55; }
+  .record .caption { color: var(--muted); margin: 0; max-width: 46ch; align-self: end; }
+  .record .since { color: var(--s); margin: 12px 0 0; }
+  .record .since b { font-weight: 600; }
+  /* An entrance, not an effect: four numbers arriving in order reads as a tally being read out. */
+  @keyframes stat-rise { from { opacity: 0; transform: translateY(10px); } }
+  .stat { animation: stat-rise .5s cubic-bezier(.22, 1, .36, 1) backwards; }
+  .stat:nth-child(2) { animation-delay: .07s; }
+  .stat:nth-child(3) { animation-delay: .14s; }
+  .stat:nth-child(4) { animation-delay: .21s; }
+  /* A backwards-fill entrance holds its content INVISIBLE for the whole delay, so cancelling the
+     animation without cancelling the delay is how a reduce-motion setting blanks a page. */
+  @media (prefers-reduced-motion: reduce) { .stat { animation: none; } }
+  /* Still open — the same counts as before, in the same words, one rank quieter and carrying the
+     date they were true. Nothing here was softened; it stopped being the first thing read. */
+  /* auto-fit at 380px: three columns on a wide screen, two on a laptop, one on a phone, without
+     three breakpoints anyone has to keep in step. `align-items: start` because these are three
+     answers of different lengths, not three cards that should pretend to match. */
+  .mast3 { margin-top: var(--s6); display: grid; gap: var(--s6) var(--s7); align-items: start;
+           grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
+  .days, .open, .donext { padding-top: var(--s3); border-top: 1px solid var(--line); }
+  .days .lbl, .open .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+                           text-transform: uppercase; color: var(--dim); }
+  .days { margin-bottom: var(--s3); }
+  .open b { color: var(--ink); font-weight: 600; }
+  /* Numbers on their own rail so the eye reads a column of counts, then chooses a line to read.
+     `ch` and not `em`: the rail is sized by the widest NUMBER it has to hold, which is what it is. */
+  .facts { list-style: none; margin: var(--s3) 0 0; padding: 0; }
+  .facts li { display: grid; grid-template-columns: 3.5ch minmax(0, 1fr); gap: 0 var(--s3);
+              align-items: baseline; padding: 3px 0; color: var(--muted); line-height: 1.5; }
+  .facts b { font-family: var(--mono); font-size: 15px; text-align: right; }
+  /* THE DAYS. One mark per event, grouped by the day it happened — the only thing on this page that
+     shows the work arriving rather than the work remaining. Marks are 5px and never scale to fit:
+     a strip that squeezed itself would make a busy day look like a quiet one. */
+  /* auto, not 1fr: with a fraction the marks sat in a 600px column and the day's count floated at
+     the far right of it, unreadable as the end of its own bar. Sized to content, the number lands
+     against the last mark and each day reads as one object. */
+  .dayrow { display: grid; grid-template-columns: 5.5em auto auto; gap: 0 var(--s3);
+            justify-content: start; align-items: center; padding: var(--s1) 0; }
+  .dayrow .dd { font-family: var(--mono); font-size: 11px; color: var(--dim); text-align: right; }
+  .dayrow .dn { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .marks { display: flex; gap: 3px; flex-wrap: wrap; }
+  /* The marks grow with the room. At 5px in a 500px column the busiest day of the four read as a
+     smudge; a day's work should be legible as a run you can count. They never SCALE to fit, though —
+     a strip that stretched itself would make a quiet day look like a busy one. */
+  .marks i, .dkey i { display: inline-block; width: 5px; height: 16px; border-radius: 1px; }
+  @media (min-width: 1080px) { .marks i { width: 8px; height: 22px; } .marks { gap: 4px; } }
+  .marks i { animation: mark-in .4s cubic-bezier(.22, 1, .36, 1) backwards; }
+  /* Left to right, a day at a time — the marks arrive in the order the work did. Capped so a long
+     history cannot make the last day wait: the entrance is a flourish, not a loading bar. */
+  .marks i:nth-child(2) { animation-delay: .02s; } .marks i:nth-child(3) { animation-delay: .04s; }
+  .marks i:nth-child(4) { animation-delay: .06s; } .marks i:nth-child(5) { animation-delay: .08s; }
+  .marks i:nth-child(n+6) { animation-delay: .1s; }
+  @keyframes mark-in { from { opacity: 0; transform: scaleY(.3); } }
+  @media (prefers-reduced-motion: reduce) { .marks i { animation: none; } }
+  .k-fixed { background: var(--a); } .k-described { background: var(--b); }
+  .k-graded, .k-mapped { background: var(--u); } .k-regraded { background: var(--s); }
+  .k-rechecked { background: var(--a); box-shadow: inset 0 0 0 1px var(--bg), 0 0 0 1px var(--a); }
+  .k-expected { background: var(--c); }
+  /* The swatch is its own element. The `k-` classes set a BACKGROUND, so hanging them on the legend
+     word painted each label as a solid block of colour with the text inside it — a legend that
+     looked like six buttons. */
+  /* No left indent. Hanging it off the day-label rail cost the legend a fifth of its line and made
+     six short words wrap onto two, the second row starting nowhere in particular. */
+  .dkey { display: flex; gap: var(--s3) var(--s4); flex-wrap: wrap; margin: var(--s4) 0 0;
+          font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+          color: var(--dim); }
+  .dkey span { display: inline-flex; align-items: center; gap: 6px; }
+  .dkey i { height: 10px; }
+  /* The one bar on the page that fills UP. Everything else here empties. */
+  .fix { margin-top: 16px; }
+  .fix .track { height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden;
+                max-width: 420px; }
+  .fix .track span { display: block; height: 100%; background: var(--a); border-radius: 3px;
+                     animation: fill-in .9s cubic-bezier(.22, 1, .36, 1) backwards; }
+  @keyframes fill-in { from { width: 0 !important; } }
+  @media (prefers-reduced-motion: reduce) { .fix .track span { animation: none; } }
+  .fix p { margin-top: 8px; }
+  main { padding-block: var(--s6) var(--s8); }
+  /* Two views: where things stand, and what to do about it. The second is why anyone opens this twice. */
+  /* One recommendation beats a menu. Six themes and seventy-six items is a menu. */
+  /* Border-left only, no card: this sits beside "still open" now, and two bordered boxes side by
+     side read as two competing panels rather than one answer to the other. */
+  /* 2px, matching `.ev.is-fresh` and `.theme .worst`: a coloured left rail is this board's own mark
+     for "this one matters", and it was the only one wearing a different weight. */
+  .donext { border-top-color: var(--a); }
+  .donext .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+                 color: var(--a); }
+  .donext .what { margin-top: var(--s1); max-width: 62ch; }
+  .donext .why { color: var(--muted); font-size: 14px; margin-top: var(--s1); max-width: 62ch; }
+  .donext .chips { margin-top: var(--s2); }
+  .views { display: flex; gap: 4px; margin-top: 18px; flex-wrap: wrap; }
+  .views button { font: inherit; font-size: 13px; background: none; color: var(--muted); cursor: pointer;
+                  border: 1px solid transparent; border-radius: 999px; padding: 5px 14px; }
+  .views button:hover { color: var(--ink); }
+  .views button[aria-pressed="true"] { color: var(--ink); border-color: var(--line); background: var(--panel); }
+  .roadmap { max-width: 860px; }
+  .roadmap > .lede { color: var(--muted); margin: 0 0 30px; white-space: pre-wrap; }
+  .theme { border-top: 1px solid var(--line); padding: 22px 0; }
+  .theme h2 { font-family: var(--serif); font-weight: 500; font-size: 21px; margin: 0 0 4px; }
+  .theme .n { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-right: 8px; }
+  .theme .why { color: var(--muted); margin: 8px 0 0; }
+  .theme ul { list-style: none; margin: 14px 0 0; padding: 0; }
+  .theme li { display: flex; gap: 10px; align-items: baseline; margin: 0 0 8px; }
+  .theme .worst { border-left: 2px solid var(--recheck); padding-left: 12px; margin-top: 14px; color: var(--ink); }
+  .theme .buys { margin-top: 14px; color: var(--a); }
+  .rowlink { font: inherit; font-size: 12px; font-family: var(--mono); background: none; cursor: pointer;
+             border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; color: var(--muted);
+             white-space: nowrap; flex: none; }
+  .rowlink:hover { color: var(--ink); border-color: var(--muted); }
+  .order { border-top: 1px solid var(--line); padding: 22px 0 0; }
+  .order ol { padding-left: 20px; }
+  .order li { margin: 0 0 12px; }
+  .order .done { color: var(--muted); text-decoration: line-through; }
+  .order .done + .donenote { color: var(--a); text-decoration: none; display: block; margin-top: 4px; }
+  /* Shelves, not columns. Five columns put every card in whichever one is populated — on a board
+     that starts (and for a long while stays) entirely ungraded, that is one tall thin stack beside
+     four empty fifths. Stacked shelves read the same at every stage of filling up. */
+  .board { display: flex; flex-direction: column; gap: 30px; }
+  /* One line per part. The grid of cards this replaces spent eight lines of 13px grey on each of
+     fourteen parts, five across — about a hundred lines of repeated labels standing between the
+     reader and fourteen facts. A table says the same thing in fourteen lines and one header. */
+  /* The columns are sized by the LIST, not by each row, so the letters sit just past the longest
+     part name instead of halfway across a 1440px screen. That needs one grid the rows share, which
+     is what subgrid is: the fixed split below is what a browser without it falls back to. */
+  /* A FIXED name column, not max-content: each section is its own grid, so sizing to the longest
+     name put the letters at three different places down one page (measured: 339px, 180px, 250px). */
+  /* A column for what the part is SUPPOSED to be. Every row already carried a target and the board
+     spent it entirely on the 3px colour bar, so fourteen rows reading "C C" gave the eye nothing to
+     sort by — the fact that two of them are aiming at the crown while nine only have to be solid was
+     on the page as a shade of orange. The word is the same one the part's own page uses. */
+  .parts { display: grid; grid-template-columns: 3px minmax(0, 25em) 30px 30px 8.5em minmax(0, 1fr);
+           gap: 0 var(--s5); }
+  .hdr, .line { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
+  @supports not (grid-template-columns: subgrid) {
+    .hdr, .line { grid-template-columns: 3px minmax(0, 1fr) 30px 30px 8.5em minmax(0, 1.15fr); gap: 0 var(--s5); }
+  }
+  /* THE PROMISE, on wide screens only. The row already carried the sentence a grade is measured
+     against and it lived three clicks away on the part page, while the row itself ran out of things
+     to say about 550px early. It is also the answer to "what does this row actually cover" — which
+     the names alone were measured NOT to give: their owner had to ask. One line, clipped, because
+     the whole sentence is a click away and the point here is recognition, not reading. */
+  .line .promise, .hdr .pr { display: none; }
+  @media (min-width: 1400px) {
+    .parts { grid-template-columns: 3px minmax(0, 22em) 30px 30px 8.5em minmax(0, 1fr) 17em; }
+    @supports not (grid-template-columns: subgrid) {
+      .hdr, .line { grid-template-columns: 3px minmax(0, 22em) 30px 30px 8.5em minmax(0, 1fr) 17em; }
+    }
+    .line .promise, .hdr .pr { display: block; }
+    .line .promise { color: var(--dim); font-size: 13px; white-space: nowrap;
+                     overflow: hidden; text-overflow: ellipsis; }
+    .line:hover .promise, .line:focus-visible .promise { color: var(--muted); }
+  }
+  /* NO HORIZONTAL PADDING on either of these. A subgrid item's padding eats into the first and last
+     tracks of the grid it inherits, and the first track here is the 3px gutter bar — 10px of padding
+     collapsed it to zero width and the target-gap marks silently vanished from all fourteen rows. */
+  .hdr { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         color: var(--dim); padding: 0 0 7px; }
+  @media (max-width: 720px) {
+    .board { gap: 24px; }
+    :root { --pad: 20px; }
+    header { padding-block: var(--s5) var(--s4); } main { padding-block: var(--s5) var(--s7); }
+    h1 { font-size: 28px; }
+    /* The state phrase drops under the name rather than squeezing a fifth column onto a phone. The
+       header row goes with it — a two-word legend for two columns that are now on separate lines. */
+    .hdr { display: none; }
+    /* THE PARENT TOO, not just the row. `.line` inherits `.parts`'s tracks via subgrid, so
+       overriding only the row left the CONTAINER still holding a 136px goal column and five 24px
+       gaps — a 319px floor inside a 305px screen, which pushed the whole page sideways by 26px at
+       320px wide. Measured by walking every element's right edge, after two guesses at the day
+       strip missed it entirely. */
+    .parts { grid-template-columns: 3px minmax(0, 1fr) 30px 30px; gap: 0 12px; }
+    .line { grid-template-columns: 3px minmax(0, 1fr) 30px 30px; gap: 0 12px; padding: 11px 0; }
+    /* The column headers are gone at this width, so the goal has to carry its own label — without it
+       a phone shows a bare "solid" between two sentences and nothing says what it is a claim about. */
+    .line .goal, .line .state, .line .promise { grid-column: 2 / -1; margin-top: 3px; }
+    .line .goal::before { content: 'should be '; color: var(--dim); }
+    .stats { gap: var(--s4) var(--s6); }
+    .keys { font-size: 12px; }
+    /* The marks track is `auto` (content-sized) so a day reads as one object, which also means it
+       never wraps — the busiest day measured 297px inside a 280px container at 320px wide and
+       pushed the whole page sideways by 26px. A fraction here lets `flex-wrap` do its job. */
+    .dayrow { grid-template-columns: 4.5em minmax(0, 1fr) auto; }
+  }
+  /* A measure, not the full width of the screen. Fourteen lines running to 1,377px made the letters
+     land 500px past the end of the names they belong to. */
+  .tier { max-width: 1580px; }
+  .tier > h2 { font-family: var(--serif); font-weight: 500; font-size: 17px; letter-spacing: .18em;
+               text-transform: uppercase; margin: 0 0 4px; padding-bottom: 8px;
+               border-bottom: 1px solid var(--tier-color, var(--line)); color: var(--tier-color, var(--muted)); }
+  .tier > h2 .n { font-family: var(--mono); font-size: 12px; letter-spacing: 0; color: var(--muted); }
+  /* A section says what it MEANS under its own heading. The old shelves were single letters, which
+     needed no explaining and got none; "waiting for a re-check" is a claim about the state of the
+     project and has to earn itself in one line. */
+  .secsub { color: var(--muted); font-size: 13px; margin: 0 0 12px; max-width: 640px; }
+  /* An empty section is skipped entirely rather than rendered as a dash — unlike the tier shelves it
+     replaced, where "S — " with nothing under it was itself the news. */
+  .state-waiting { --tier-color: var(--recheck); }
+  .state-drifted { --tier-color: var(--b); }
+  .state-current { --tier-color: var(--a); }
+  .state-unseen  { --tier-color: var(--u); }
+  .state-unseen > h2 { color: var(--muted); } /* --u is a shape colour; as WORDS it reads at 2.5:1 */
+  /* A <button>, so the keyboard reaches every part. These four lines undo the button look. */
+  .line { width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: 0;
+          border-top: 1px solid var(--line); padding: 11px 0; cursor: pointer; transition: background .12s; }
+  .line:hover, .line:focus-visible { background: var(--panel); }
+  /* The letter alone says nothing — thirteen rows read C. The GAP between where a part is and where
+     it should be is the signal, so the line's left edge carries that instead. */
+  .line .bar { align-self: stretch; border-radius: 2px; background: var(--line); }
+  .line.gap0 .bar { background: var(--a); }
+  .line.gap1 .bar { background: var(--recheck); }
+  .line.gap2 .bar { background: #c4553d; }
+  /* Three short existed in the data and shared a colour with two short — so the one row aiming at
+     the crown from the bottom rung, which is also the row the whole "do this next" box is about,
+     looked exactly like three rows half as far away. */
+  .line.gap3 .bar { background: #b23a2a; }
+  /* Name left, the part of the app it belongs to right, on one line. The right edge of the name
+     column becomes a second rail the eye can run down, and grouping costs no extra row. */
+  .line .name { font-weight: 600; display: flex; align-items: baseline; gap: 12px; }
+  /* --muted, NOT --u: this file already records that --u is a shape colour reading at 2.5:1 as
+     WORDS, and the group is a word. `order` rather than DOM position, so the crown — which is an
+     ::after and therefore always the last flex item — still lands against the name it belongs to
+     instead of trailing the group label at the far edge of the column. */
+  .line .name i { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--muted);
+                  letter-spacing: .04em; flex: none; margin-left: auto; order: 2; }
+  .line:hover .name i, .line:focus-visible .name i { color: var(--ink); }
+  .crowned .name::after { order: 1; }
+  /* The goal, in the same plain word the part page uses. Dimmer than the letters: it is what the row
+     is aiming AT, and the letters are where it actually is. */
+  .line .goal { font-size: 13px; color: var(--muted); }
+  .line.gap0 .goal { color: var(--a); }
+  .line .goal .unset { color: var(--dim); }
+  .line .g { font-family: var(--mono); color: var(--ink); }
+  .line .g i { color: var(--muted); font-style: normal; } /* the "?" — nobody computed this one */
+  .line .state { color: var(--muted); font-size: 14px; }
+  .line .state em { color: var(--recheck); font-style: normal; }
+  .donext .also { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .donext .also .lbl { color: var(--recheck); }
+  .legend { display: flex; gap: var(--s4); flex-wrap: wrap; margin: 0 0 var(--s3); font-size: 13px; color: var(--muted); }
+  .legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; }
+  .legend .g0::before { background: var(--a); } .legend .g1::before { background: var(--recheck); }
+  .legend .g2::before { background: #c4553d; } .legend .g3::before { background: #b23a2a; }
+  /* What the letters MEAN. The board showed fourteen of them and never once said what one was worth,
+     which is the one thing a person who does not read the code cannot work out for themselves. */
+  .keys { color: var(--muted); font-size: 13px; margin: 0 0 var(--s5); line-height: 1.7; }
+  .keys b { font-family: var(--mono); color: var(--ink); font-weight: 600; }
+  /* HOW LUMIFY COMPARES — the field checks, which were ~41,000 characters of the most readable
+     writing on this board and had no presence at all on the front page. Every line here is LIFTED
+     from a row's own `standing` prose (see ladder.js), so this section is an index, not a claim:
+     it is the roadmap's relationship to the rows, one view over. Ahead comes first on purpose — the
+     board counts what it has done and then draws only what is left, and this is where that turns. */
+  .compare { margin: 0 0 var(--s8); }
+  .compare > h2 { font-family: var(--serif); font-weight: 500; font-size: 17px; letter-spacing: .18em;
+                  text-transform: uppercase; color: var(--muted); margin: 0 0 var(--s3); }
+  /* The tally and its footnote, side by side and sharing a baseline. Stacked, the tally's own
+     measure had to be short enough not to run away from the note under it, which broke a
+     nine-word sentence across three lines at 40px. Beside it, the sentence gets a full line. */
+  .chead { display: grid; gap: var(--s3) var(--s7); align-items: end; margin: 0 0 var(--s6);
+           grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+  .compare .tally { font-family: var(--serif); font-size: clamp(23px, 2.4vw, 38px); line-height: 1.22;
+                    color: var(--muted); margin: 0; font-weight: 500; text-wrap: balance; }
+  .compare .tally b { color: var(--s); font-weight: 500; }
+  .compare .tally .neg { color: var(--ink); font-weight: 500; }
+  .compare .note { color: var(--dim); font-size: 13px; margin: 0; max-width: 62ch; }
+  /* THREE COLUMNS, one per verdict — so the whole comparison is one screen instead of a thirty-one
+     row scroll, and the columns' own heights say 10 / 8 / 13 before a word is read. auto-fit rather
+     than a breakpoint: below about 1100px there is no honest way to fit three of these, and the
+     same rule then gives two and finally one without anyone choosing the numbers. */
+  .bands { display: grid; gap: var(--s5) var(--s7); align-items: start;
+           grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); }
+  .band { border-top: 1px solid var(--line); padding: var(--s4) 0 var(--s1); }
+  .band > h3 { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+               margin: 0 0 var(--s1); display: flex; align-items: baseline; gap: 9px; }
+  .band > h3 .n { font-family: var(--serif); font-size: 21px; letter-spacing: 0; }
+  .band.ahead > h3 { color: var(--s); } .band.level > h3 { color: var(--muted); }
+  .band.behind > h3 { color: var(--c); }
+  /* Each column says what it MEANS, the same rule the board's own sections follow. Reading "level
+     with the field" and guessing whether that is good news is a question the heading can answer. */
+  .band .bsub { color: var(--dim); font-size: 12px; margin: 0 0 var(--s3); }
+  /* A stripe rather than a bullet: at a glance the page should read as three blocks of different
+     weight, which is the shape of the answer, before a single line has been read. */
+  .band .ln { display: grid; grid-template-columns: 3px minmax(0, 1fr); gap: 0 var(--s3);
+              align-items: stretch; padding: var(--s2) 0; }
+  .band .ln .stripe { align-self: stretch; border-radius: 2px; }
+  .band .ln .cl { display: block; }
+  .band .ln .what { display: block; margin-top: 2px; }
+  .band.ahead .ln .stripe { background: var(--s); } .band.level .ln .stripe { background: var(--u); }
+  .band.behind .ln .stripe { background: var(--c); }
+  .band .ln .what { color: var(--muted); }
+  .band.ahead .ln .what { color: var(--ink); } /* the good news is the news; it gets the readable ink */
+  /* No box and no nowrap. `.rowlink` is a bordered mono chip everywhere else, which is right for the
+     two or three that sit inside a sentence — thirty-one of them stacked read as a wall of boxes,
+     and "Smart playlists & connected libraries" overflowed its column and printed straight through
+     the claim beside it (seen on screen: "connected librari-on reach"). */
+  .band .rowlink { display: block; text-align: left; white-space: normal; font-family: inherit;
+                   font-size: 15px; border: 0; padding: 0; color: var(--muted); font-weight: 600; }
+  .band .rowlink:hover, .band .rowlink:focus-visible { color: var(--ink); text-decoration: underline; }
+  .band.ahead .rowlink { color: var(--s); }
+  .chips { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 11px; padding: 2px 7px; border-radius: 10px;
+          border: 1px solid var(--line); color: var(--muted); }
+  .chip b { color: var(--ink); font-weight: 600; }
+  .chip.warn { border-color: var(--recheck); color: var(--recheck); }
+  /* "nobody computed this" must not look like either "clean" or "re-check". */
+  .chip.unknown { border-style: dotted; border-color: var(--muted); }
+  .chip.unknown b { color: var(--muted); }
+  .chip.goal { border-style: dashed; }
+  /* Thirteen rows all reading C tells you nothing about where to start. The count of things standing
+     in the way does, and it is already in the data. */
+  .chip.dist b { color: var(--a); }
+  .day { border-top: 1px solid var(--line); padding: 24px 0 6px; }
+  .day > h2 { font-family: var(--serif); font-weight: 500; font-size: 21px; margin: 0 0 16px; color: var(--ink); }
+  .day > h2 .n { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-left: 8px; }
+  .ev { margin: 0 0 24px; max-width: 700px; }
+  .ev .head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+  .ev .what { margin: 0; line-height: 1.62; }
+  .ev .when { color: var(--dim); margin-top: 5px; }
+  .ev.is-fresh { border-left: 2px solid var(--s); padding-left: 14px; margin-left: -16px; }
+  .kind { font-family: var(--mono); font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); }
+  .kind.fixed { color: var(--a); border-color: var(--a); }
+  .kind.graded { color: var(--muted); }
+  .kind.regraded { color: var(--s); border-color: var(--s); }
+  .kind.expected { color: var(--b); border-color: var(--b); }
+  .kind.described { color: var(--muted); border-color: var(--line); }
+  /* The payoff of the whole loop — a repair verified, letters held — and it wore the default grey
+     because the kind was invented after these colours were. */
+  .kind.rechecked { color: var(--a); border-color: var(--a); }
+  .chip.old { border-color: var(--u); color: var(--dim); }
+  .crowned .name::after { content: ' ♛'; color: var(--s); }
+  /* A part is a PAGE, not a drawer: it holds paragraphs, and paragraphs do not read in a 480px
+     column. It is a view beside the board rather than a layer over it, so the browser's own back
+     button is the way out and nothing has to manage a stack of open things. */
+  #part { max-width: 760px; margin: 0 auto; padding: 8px 0 60px; }
+  #part .back { background: none; border: none; color: var(--muted); font: inherit; cursor: pointer;
+                padding: 0 0 18px; }
+  #part .back:hover { color: var(--ink); }
+  #part h2 { font-family: var(--serif); font-weight: 500; font-size: 34px; margin: 0; }
+  /* Focus lands here on arrival so a screen reader starts at the part rather than the top of the
+     document. It is a heading, not a control, so the ring would only look like a mistake. */
+  #part h2:focus { outline: none; }
+  #part .promise { color: var(--muted); font-style: italic; margin: 10px 0 24px; font-size: 17px; }
+  #part section { border-top: 1px solid var(--line); padding: 18px 0; }
+  #part h3 { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  #part .empty { color: var(--muted); }
+  #part ul { margin: 6px 0 0; padding-left: 18px; }
+  #part li { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 2px 0; }
+  #part li.changed { color: var(--recheck); }
+  #part li.gone { color: var(--recheck); text-decoration: line-through; }
+  #part .mono { font-family: var(--mono); font-size: 12px; }
+  #part .warn { color: var(--recheck); }
+  /* The explanation is the one part of this page written to be READ rather than scanned. */
+  #part .how { font-size: 16px; line-height: 1.65; white-space: pre-wrap; }
+  /* The raw notes are the source the surprises were drawn from — kept, because nothing should be
+     removed from the record, but folded away, because reading them twice is not reading. */
+  /* In the plan these buttons carry row ids, which are code. Here they carry a theme's title, which
+     is a sentence — and a sentence set in monospace reads as something you are meant to type. */
+  /* These carry row ids in the plan, which must not wrap. Here they carry a theme's whole title,
+     and nowrap pushed the page sideways on a phone by up to 49px (measured at 390px wide). */
+  #part .rowlink { font-family: inherit; font-size: 14px; white-space: normal; text-align: left; }
+  #part summary { cursor: pointer; color: var(--muted); }
+  #part summary::marker { color: var(--u); }
+  #part .trap { margin: 0 0 16px; }
+  #part .trap .what { color: var(--ink); }
+  #part .trap .why { color: var(--muted); margin-top: 3px; }
+  /* Proof is a command, its output and a sentence — its newlines are the content. */
+  .proof { white-space: pre-wrap; }
+  /* The way up is the encouraging half of a grade, so it gets the accent rather than the muted grey. */
+  #part .next h3 { color: var(--a); }
+  #part .next ol { margin: 6px 0 0; padding-left: 20px; }
+  /* the Parts rule above sets every #part li to 12px muted mono; these are sentences, not paths */
+  #part .next li { margin: 0 0 10px; font: inherit; color: var(--ink); }
+  #part .next li::marker { color: var(--a); font-weight: 600; }
+  /* The page must say what broke rather than blank itself. */
+  .broken { border: 1px solid var(--recheck); border-radius: 8px; padding: 20px 22px; }
+  .broken b { color: var(--recheck); }
+  .broken p { color: var(--muted); margin: 10px 0 0; }
+  .broken .mono { font-family: var(--mono); font-size: 12px; margin-top: 8px; }
+  @media (max-width: 720px) { #part h2 { font-size: 27px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+  <h1>The <em>Ladder</em><span id="proj"></span></h1>
+  <div class="sub" id="sub"></div>
+  <!-- The tabs sit ABOVE the record, not below it. Underneath, they landed ~760px down the page —
+       past four big numbers, a paragraph of counts and the green box — which on an ordinary laptop
+       is below the fold. The owner asked for "somewhere that says where this should go next", which
+       is what "What to do" already is: it was not missing, it was off-screen. -->
+  <div class="views">
+    <button id="tab-board" aria-pressed="true">Where things stand</button>
+    <button id="tab-plan" aria-pressed="false">What to do</button>
+    <button id="tab-moved" aria-pressed="false">What's moved</button>
+  </div>
+  <!-- THE RECORD, then what is still open, in that order — and the order is the whole idea. Two
+       shapes have stood here before: a progress bar pinned at 0% for months by design, and a pair
+       of SETTLED / IN MOTION columns whose four opening facts were all bad news on a day when a
+       fortnight of work had landed. A repair still may not move a letter; that rule governs
+       letters, and it had quietly taken the page's whole voice with it. -->
+  <div class="record" id="record"></div>
+  <!-- THREE QUESTIONS, THREE COLUMNS: what has been happening, what is still open, what to do about
+       it. Stacked, they were three half-empty blocks down the left edge of a 2560px screen; they
+       are also three different questions, so a column each is what they were all along. -->
+  <div class="mast3">
+    <div class="days" id="days"></div>
+    <div class="open" id="open"></div>
+    <div class="donext" id="donext" hidden></div>
+  </div>
+  </div>
+</header>
+<main class="wrap"><section class="compare" id="compare" hidden></section><div class="legend" id="legend" hidden><span class="g0">where it should be</span><span class="g1">one step short</span><span class="g2">two steps short</span><span class="g3">three steps short</span></div><p class="keys" id="keys" hidden><b>C</b> it works · <b>B</b> nothing a person would meet in ordinary use is wrong · <b>A</b> it survived someone actively trying to break it · <b>S</b> the crown, and only you can grant it</p><div class="board" id="board"></div><div class="roadmap" id="roadmap" hidden></div><div class="roadmap" id="moved" hidden></div><div id="part" hidden></div></main>
+<script src="ladder.js"></script>
+<!-- explain.js is SEPARATE from ladder.js on purpose: it is the only file here holding paragraphs,
+     and one stray backtick in ladder.js blanks the entire board. Here it loses only the writing. -->
+<script src="explain.js"></script>
+<script src="staleness.js"></script>
+<!-- roadmap.js is empty until a project has been graded and its findings folded into themes. It is
+     loaded normally, in order: injecting it dynamically would load it ASYNC, and the render below
+     would race it. A fresh map ships the empty version rather than 404-ing on its first day. -->
+<script src="roadmap.js"></script>
+<script src="history.js"></script>
+<script>
+  /**
+   * THE VERSION OF THIS PAGE — the board itself, never the project's data.
+   *
+   * A board is COPIED into its project and then never hears about an improvement again. Measured on
+   * the second project this shipped to: its index.html was 854 lines behind, missing four whole
+   * sections, and nothing on the page or in the skill would ever have said so. The only reason
+   * anyone found out was somebody running a diff by hand.
+   *
+   * So the page states its own age, under the title, beside the commit it was refreshed at. A date
+   * rather than a number because it sorts on sight and needs no changelog to interpret.
+   * BUMP THIS whenever index.html changes in a way a copied board would want.
+   */
+  const BOARD_VERSION = '2026-08-12';
+  // esc lives outside the guard below — the failure message needs it and it cannot itself throw.
+  const esc = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+  try {
+  // ladder.js is hand-edited free text — the likeliest thing here to break. A thrown script leaves
+  // an empty page with no explanation, so the whole body runs under one guard.
+  if (!window.LADDER) throw new Error('window.LADDER is not defined — ladder.js did not load or did not parse.');
+  const L = window.LADDER, S = window.STALENESS;
+  // A hand-written row may leave a whole block off, and `feels: null` is the obvious way to write
+  // "never graded" — which is what it means for feels, guts and field, so filling those in is the
+  // correct READING of the file rather than a patch over a bad one. (It does NOT save a missing
+  // brace: that is a syntax error, ladder.js never parses, and the guard below is what speaks.)
+  // `parts` is the exception and gets a chip on the card: an absent watch-list is not a fact about
+  // grading, it is a row watching nothing while its files fall into the census as if unclaimed.
+  for (const r of L.rows) { r.feels ||= {}; r.guts ||= {}; r.field ||= {}; r.parts ||= []; }
+  const ORDER = { C: 0, B: 1, A: 2 };
+
+  // A letter outside the scale silently loses every comparison below (undefined <= 2 is false).
+  // The spec plans an A+ "for one line" — forgetting that line should be loud, so say it once.
+  for (const row of L.rows) for (const k of ['feels', 'guts']) {
+    const g = row[k].grade;
+    if (g != null && !(g in ORDER)) console.warn(`ladder: row "${row.id}" has ${k} grade "${g}", which is not C, B or A — it is ignored on the board. Add it to ORDER.`);
+  }
+
+  // THREE-VALUED, because "computed and clean" and "nobody computed it" are different facts:
+  // null = ungraded · clean · stale (files moved) · unknown (graded after the last refresh).
+  const letterState = (row, key) => {
+    if (!row[key].grade) return null;
+    const st = S?.rows?.[row.id]?.[key];
+    if (!st) return { state: 'unknown', note: 'staleness not computed for this grade — run node docs/quality/refresh.mjs' };
+    if (st.error) return { state: 'stale', note: st.error };
+    if (st.changed?.length) return { state: 'stale', note: `${st.changed.length} file(s) changed since — re-check` };
+    return { state: 'clean', note: '' };
+  };
+  const rowIs = (row, want) => ['feels', 'guts'].some((k) => letterState(row, k)?.state === want);
+  const missingParts = (row) => S?.rows?.[row.id]?.missing ?? [];
+  // A crown is hand-written like everything else, so the board verifies it rather than trusting it:
+  // no crown outranks its own letters. The ♛ stays on the card, which is how a slip becomes visible.
+  const crowned = (row) => !!row.crown && row.feels.grade === 'A' && row.guts.grade === 'A';
+  // Board tier: crowned → S; both letters graded → the lower; anything less → Ungraded.
+  const tier = (row) => {
+    if (crowned(row)) return 'S';
+    const f = row.feels.grade, g = row.guts.grade;
+    if (!f || !g) return 'U';
+    return ORDER[f] <= ORDER[g] ? f : g;
+  };
+  const graded = (row) => tier(row) !== 'U';
+  // How far a part is from what it should be. S is a crown rather than a letter, so it sits one
+  // above A on this ruler only — for measuring distance, not for grading.
+  const RUNG = { C: 0, B: 1, A: 2, S: 3 };
+  const WANT = { S: 'should be outstanding', A: 'should be excellent', B: 'should be solid', C: 'good enough is fine here' };
+  // The same four expectations as WANT, short enough for a column. One map derived from the other
+  // would still be two strings to keep in step, and "good enough is fine here" has no short form
+  // that means the same thing — so they are written out, next to each other, where a drift is visible.
+  const GOAL = { S: 'outstanding', A: 'excellent', B: 'solid', C: 'fine as is' };
+  /**
+   * The part of the app a row belongs to — the owner's second axis for reading fourteen rows.
+   *
+   * They asked for "frontend / backend" sections. Measured against the data, 13 of the 14 rows list
+   * both web and server files (Search: 1 and 6; Your library: 5 and 3), so that split would cut
+   * almost every row in half — and it is the folder taxonomy a part is defined in opposition to.
+   * This is the same instinct on the axis the rows are actually drawn on: what the person is DOING.
+   * Order is the arc of using the app, and it is what rows sort by inside a section.
+   * A row with no `group` sorts last and shows nothing, like every other optional field here.
+   */
+  // The words carry "music"/"it" because the bare verbs failed the only test that matters: the owner
+  // read "finding" and "keeping" on the page and could not tell what either meant. A label needing a
+  // legend is not a label — and there was no legend, which made it worse.
+  const GROUPS = ['finding music', 'playing it', 'keeping it', 'sharing it', 'running it'];
+  const groupRank = (row) => { const i = GROUPS.indexOf(row.group); return i < 0 ? GROUPS.length : i; };
+  /**
+   * How long ago anyone LOOKED. Staleness only fires when the code changes, and this project talks to
+   * services that change underneath it — so a part nobody has touched can rot while its files sit
+   * perfectly still, and the board would keep showing a confident letter forever. "Is anyone looking
+   * after this" is a question about the looking, so a grade goes quiet on its own.
+   * 60 days: long enough that ordinary months do not nag, short enough that a season cannot pass unseen.
+   */
+  const STALE_DAYS = 60;
+  const daysSince = (iso) => {
+    if (!iso) return null;
+    const t = Date.parse(iso + 'T00:00:00Z');
+    // NEVER NEGATIVE. A date is written in the grader's LOCAL time and compared against UTC
+    // midnight, so a grade stamped just after local midnight is up to a day in the "future" and the
+    // page rendered "Last looked at -1 days ago" — seen on screen the first night this could
+    // happen. Clamping is the whole fix: a grade cannot be looked at less recently than now.
+    return Number.isNaN(t) ? null : Math.max(0, Math.floor((Date.now() - t) / 86400000));
+  };
+  const lookedAgo = (row) => {
+    const d = [row.feels.date, row.guts.date].map(daysSince).filter((n) => n !== null);
+    return d.length ? Math.min(...d) : null;
+  };
+  const gapOf = (row) => {
+    if (!row.target || !graded(row)) return null;
+    return Math.max(0, RUNG[row.target] - RUNG[tier(row)]);
+  };
+  const atTarget = (row) => {
+    const t = tier(row);
+    if (t === 'U' || !row.target) return false; // no target set is not "not there yet" — see below
+    if (row.target === 'S') return t === 'S';
+    return t === 'S' || ORDER[t] >= ORDER[row.target];
+  };
+
+  // header — the project names itself, so this page is the same file in every repo
+  if (L.project) {
+    document.getElementById('proj').textContent = ` · ${L.project}`;
+    document.title = `The Ladder — ${L.project}`;
+  }
+  const sub = document.getElementById('sub');
+  const bits = [`<span>${esc(L.rows.length)} rows · two letters each · S is the crown</span>`];
+  // Both fields checked, not just S: a torn or half-written staleness.js must degrade to "unknown".
+  if (S?.head && S?.generatedAt) bits.push(`<span class="mono" title="Staleness compares each grade's commit to HEAD. Edits you have not committed yet are invisible to it.">head ${esc(S.head.slice(0, 7))} · staleness ${esc(S.generatedAt.slice(0, 16))} · committed history only</span>`);
+  else bits.push(`<span class="hint">staleness unknown — run <span class="mono">node docs/quality/refresh.mjs</span></span>`);
+  // Its OWN span, outside that either/or: a board with no staleness computed yet still has an age,
+  // and the day you most want to know how old the page is, is the day something else is wrong too.
+  bits.push(`<span class="mono" title="The version of this page, not of the project. Compare it against the template that ships with the ladder-map skill; if the template is newer, the board can be replaced without touching any of this project's own records.">board ${esc(BOARD_VERSION)}</span>`);
+  sub.innerHTML = bits.join('');
+  // TWO PHASES, because a target set before the map exists is a guess. While anything is ungraded the
+  // bar tracks the mapping; once every row has been looked at, it tracks the climb toward the targets
+  // set with that knowledge — and says so plainly if none have been set yet.
+  const nGraded = L.rows.filter(graded).length;
+
+  /**
+   * SETTLED vs IN MOTION — the derivation the whole board now hangs off, and it needs NO new data.
+   *
+   * `history.js` is append-only, so position IS time: a `fixed` entry that has no later grade event
+   * for its row has not been verified by anything. That single fact splits every row into one of
+   * three plain states and is what stops the board rendering an as-of-last-grading number as if it
+   * were current — the failure that produced this redesign ("97 things to fix" the morning after
+   * twelve of them were fixed).
+   */
+  const HIST = window.HISTORY ?? [];
+  /**
+   * "Since you last looked" — the one thing on this page that knows you personally.
+   *
+   * This page is opened FROM DISK by design, with no server, and a browser is entitled to refuse
+   * localStorage outright on a file:// origin. So every access is wrapped: a refusal makes the
+   * feature vanish silently rather than take the board down with it.
+   */
+  const remember = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* no memory, no feature */ } },
+  };
+  const SEEN_KEY = 'ladder:seen:' + (L.project ?? '');
+  const fingerprint = (h) => `${h.date}|${h.row}|${h.kind}|${h.commit}`;
+  const seenMark = remember.get(SEEN_KEY);
+  const seenIdx = seenMark ? HIST.findIndex((h) => fingerprint(h) === seenMark) : -1;
+  // No mark means a FIRST visit, which by definition has no news: record where we are and say
+  // nothing. A mark we can no longer find means the file was rewritten under us — also no news,
+  // because the alternative is announcing thirty-one things as new.
+  const freshEvents = seenMark && seenIdx >= 0 ? HIST.slice(seenIdx + 1) : [];
+  const freshSet = new Set(freshEvents.map(fingerprint));
+  if (!seenMark && HIST.length) remember.set(SEEN_KEY, fingerprint(HIST[HIST.length - 1]));
+  // MIDDAY, never midnight. An ISO date parsed as UTC midnight and then formatted in local time
+  // renders as the day BEFORE for anyone west of Greenwich — the same class of mistake that once put
+  // "Last looked at -1 days ago" on this page. Nothing here is ever compared, only shown, so parking
+  // the instant in the middle of its own day makes the timezone stop mattering.
+  const asDate = (iso) => new Date(iso + 'T12:00:00');
+  // A date that will not parse is SHOWN AS IT WAS WRITTEN, never as "Invalid Date". The template
+  // this file ships as carries a literal 'YYYY-MM-DD' in its first history entry, so a fresh project
+  // hits this on its very first opening — measured.
+  const human = (iso) => {
+    const d = asDate(iso);
+    return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  };
+  const humanSpan = (a, b) => {
+    if (a === b) return human(a);
+    const A = asDate(a), B = asDate(b);
+    // "9 to 12 August" rather than "9 August to 12 August" when the two share a month
+    return A.getMonth() === B.getMonth() && A.getFullYear() === B.getFullYear()
+      ? `${A.getDate()} to ${human(b)}` : `${human(a)} to ${human(b)}`;
+  };
+  // Spelled-out numbers read as prose, digits read as data. The caption is prose; the record is data.
+  const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+  const word = (n) => WORDS[n] ?? String(n);
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const GRADE_KINDS = new Set(['graded', 'regraded', 'rechecked']);
+  // The ONE place a history kind gets its plain word. It lived beside the "What's moved" list and a
+  // second copy was written for the day strip in the masthead — caught the moment the page went
+  // blank ("Identifier 'KIND_WORD' has already been declared"), which is the friendly version of
+  // the failure two copies of a vocabulary usually cause.
+  const KIND_WORD = { mapped: 'divided into parts', graded: 'checked', regraded: 'grade changed', rechecked: 're-checked, letters held', fixed: 'fixed', expected: 'expectation set', described: 'written up' };
+  /** Repairs recorded against this row since the last time anyone graded or re-checked it. */
+  const unverified = (row) => {
+    let last = -1;
+    HIST.forEach((h, i) => { if (h.row === row.id && GRADE_KINDS.has(h.kind)) last = i; });
+    return HIST.filter((h, i) => i > last && h.row === row.id && h.kind === 'fixed');
+  };
+  /** Its own files moved, but nobody repaired it — somebody else's work landed underneath. */
+  const disturbed = (row) => rowIs(row, 'stale') && unverified(row).length === 0;
+  const SETTLED = 'current', WAITING = 'waiting', DRIFTED = 'drifted', UNSEEN = 'unseen';
+  const stateOf = (row) => !graded(row) ? UNSEEN : unverified(row).length ? WAITING : disturbed(row) ? DRIFTED : SETTLED;
+  const SECTIONS = [
+    [WAITING, 'Waiting for a re-check', 'repairs landed here after the letters were set, so the letters do not know about them yet'],
+    [DRIFTED, 'Changed underneath', 'no repair of their own — work on other parts touched their files'],
+    [SETTLED, 'Current', 'nothing has changed since these letters were set'],
+    [UNSEEN, 'Not looked at yet', 'no letters, so nothing on this page speaks for them'],
+  ];
+
+  // The two columns. Every number on the left carries the date it was proven; every number on the
+  // right is labelled as something that has happened and not yet been checked. Nothing crosses.
+  const waiting = L.rows.filter((r) => stateOf(r) === WAITING);
+  const drifted = L.rows.filter((r) => stateOf(r) === DRIFTED);
+  const openFixes = waiting.flatMap(unverified);
+  // Repairs that have actually BEEN through a re-check — the payoff number of the whole loop, and
+  // the only honest way to count it. A first version counted every `regraded` event and reported
+  // "2 re-checks so far" in the IN MOTION column, on a night when nothing had been re-checked at
+  // all: those two regrades happened BEFORE the repairs they were being credited with.
+  const verifiedFixes = HIST.filter((h, i) => h.kind === 'fixed'
+    && HIST.slice(i + 1).some((x) => x.row === h.row && GRADE_KINDS.has(x.kind)));
+  const gradeDates = [...new Set(L.rows.filter(graded).map((r) => r.feels.date ?? r.guts.date).filter(Boolean))].sort();
+  const roughRows = L.rows.filter((r) => tier(r) === 'C');
+  const toFix = L.rows.reduce((n, r) => n + (r.next?.needs?.length ?? 0), 0);
+
+  /**
+   * THE RECORD — what has been done, first, in the project's own voice.
+   *
+   * Every number here is COUNTED on load and there is nowhere to type one of them by hand. That is
+   * the whole safety property: a celebration surface is the first place a flattering hand-written
+   * number would appear, and a number that flatters you is one you stop checking. It is also what
+   * makes them climb on their own as work lands, which is the only reason worth showing them.
+   *
+   * This block exists because the rule "a repair does not move a letter" — which is right, and which
+   * governs LETTERS — had escaped into the whole page's voice. Four days of checking and nine
+   * shipped repairs were rendered as "counts for nothing until a re-check says so", under a masthead
+   * whose four facts were all bad news. A shipped repair is a fact; only the grade it earns is
+   * unproven. Those are different sentences and the page now says both.
+   */
+  const X = window.EXPLAIN ?? {};
+  const nRepairs = HIST.filter((h) => h.kind === 'fixed').length;
+  const nTraps = Object.values(X).reduce((n, e) => n + (e.traps?.length ?? 0), 0);
+  const nExams = L.rows.reduce((n, r) => n + (r.exams?.length ?? 0), 0);
+  const nWritten = L.rows.filter((r) => X[r.id]?.how).length;
+  const nField = L.rows.filter((r) => r.field?.best).length;
+  // Only dates that PARSE, or one placeholder left in the file turns the caption into
+  // "NaN days, Invalid Date to Invalid Date."
+  const histDates = HIST.map((h) => h.date).filter((d) => d && !Number.isNaN(asDate(d).getTime())).sort();
+  const spanDays = histDates.length
+    ? Math.round((asDate(histDates[histDates.length - 1]) - asDate(histDates[0])) / 86400000) + 1 : 0;
+
+  // A ZERO NEVER RENDERS AS A NUMBER. This file ships as a template to projects where every one of
+  // these is zero on the first day, and a row of gold noughts is worse than saying nothing at all.
+  const STATS = [
+    { n: nGraded, l: nGraded === L.rows.length ? 'parts<br>checked' : `of ${L.rows.length} parts<br>checked`, go: 'board' },
+    { n: nRepairs, l: 'repairs<br>shipped', go: 'moved' },
+    { n: nTraps, l: 'surprises<br>written down' },
+    { n: nExams, l: 'exams<br>earned' },
+  ].filter((s) => s.n > 0);
+
+  /**
+   * THE DAYS — the same 46 events the "What's moved" tab already holds, drawn instead of listed.
+   *
+   * `history.js` is append-only and every entry is dated, so a mark per event grouped by day is
+   * free and needs no new data. It exists because four days of real work rendered as four
+   * paragraphs under a tab, and the owner's read of the front page was "just numbers and texts" —
+   * a fair one, since the only thing here that had ever been drawn was a 3px bar.
+   *
+   * One rule, the same one the stats obey: nothing is written by hand. If history is empty the
+   * strip does not render, and it never invents a day nobody worked.
+   */
+  const dayList = [...new Set(histDates)].sort();
+  const daysStrip = dayList.length < 2 ? '' : `<div class="lbl">what has been happening</div>
+    ${dayList.map((d) => {
+      const evs = HIST.filter((h) => h.date === d);
+      return `<div class="dayrow"><span class="dd">${esc(human(d))}</span>
+        <span class="marks">${evs.map((e) => `<i class="k-${esc(e.kind)}"></i>`).join('')}</span>
+        <span class="dn">${evs.length}</span></div>`;
+    }).join('')}
+    <div class="dkey">${[...new Set(HIST.map((h) => h.kind))]
+      .map((k) => `<span><i class="k-${esc(k)}"></i>${esc(KIND_WORD[k] ?? k)}</span>`).join('')}</div>`;
+
+  const headline = nGraded === L.rows.length
+    ? `Every part of ${L.project ?? 'this project'} has now been looked at.`
+    : `${nGraded} of ${L.rows.length} parts have been looked at so far.`;
+  // The caption is the good half and only the good half — anything still open is in its own block
+  // below, where it can carry the date it was true.
+  // Two sentences were cut from here because the page now SHOWS both. "Four days, 9 to 12 August"
+  // is the day strip beside this, which labels every one of them; "measured against the best out
+  // there" is the whole comparison section below. A caption that narrates what the reader can
+  // already see is the cheapest kind of clutter, because it looks like content.
+  const caption = [
+    nWritten ? (nWritten === nGraded
+      ? 'Every part has also been written up in plain words.'
+      : `${cap(word(nWritten))} of them have also been written up in plain words.`) : '',
+    verifiedFixes.length ? `${cap(word(verifiedFixes.length))} ${verifiedFixes.length === 1 ? 'repair has' : 'repairs have'} already been back through a re-check.` : '',
+  ].filter(Boolean).join(' ');
+
+  document.getElementById('record').innerHTML = nGraded === 0
+    ? '<p class="lede">Nothing checked yet — the first check writes the first line here.</p>'
+    : `<p class="lede">${esc(headline)}</p>
+       <div class="stats">${STATS.map((s) => `<div class="stat">${s.go
+         ? `<button class="n" data-go="${s.go}">${s.n}</button>` : `<span class="n">${s.n}</span>`}
+         <span class="l">${s.l}</span></div>`).join('')}</div>
+       ${caption ? `<p class="caption">${esc(caption)}</p>` : ''}
+       ${freshEvents.length ? `<p class="since"><b>${freshEvents.length}</b> ${freshEvents.length === 1 ? 'thing has' : 'things have'} moved since you last opened this.</p>` : ''}`;
+  // An EMPTY column is not an empty section — it is a horizontal rule with nothing under it, taking
+  // a third of the masthead. Caught by rendering another project's real board, where one history
+  // entry means no strip: the rule sat there beside "still open" saying nothing.
+  document.getElementById('days').innerHTML = daysStrip;
+  document.getElementById('days').hidden = !daysStrip;
+
+  // STILL OPEN. Every count here survives whole — it is simply no longer the first thing anyone
+  // reads. The label carries the as-of date because only a re-grade can refresh any of these, and
+  // the board's standing rule is that such a count either carries its date or does not render.
+  // Five facts, one per line, the numbers on their own rail. They were a single run-on sentence with
+  // five bolded numbers inside it — the least scannable shape on a page whose owner said it was
+  // "just numbers and texts", and the only one here that a reader has to parse rather than scan.
+  // Not one word of any fact was dropped; only the punctuation holding them in a paragraph.
+  const openBits = [];
+  if (toFix) openBits.push([toFix, 'things to fix']);
+  if (roughRows.length) openBits.push([roughRows.length, `${roughRows.length === 1 ? 'part has' : 'parts have'} something a person would notice`]);
+  if (openFixes.length) openBits.push([openFixes.length, `${openFixes.length === 1 ? 'repair is' : 'repairs are'} waiting for a re-check, so no letter has moved for ${openFixes.length === 1 ? 'it' : 'them'} yet`]);
+  if (drifted.length) openBits.push([drifted.length, `more ${drifted.length === 1 ? 'part was' : 'parts were'} changed underneath by that work`]);
+  if (nGraded < L.rows.length) openBits.push([L.rows.length - nGraded, 'not looked at yet']);
+  // A part nobody watches cannot go stale, so unmapped code is a hole in every promise above it.
+  if (S?.unmapped?.files) openBits.push([S.unmapped.files, `of ${S.unmapped.ofFiles} source files (${S.unmapped.lines.toLocaleString()} lines) belong to no part of this map at all`]);
+  /**
+   * The subtraction this page never performed. It said "98 things to fix" and stopped there, on a
+   * morning when repairs claiming 29 of them had already shipped — every number in the block below
+   * counts DOWN from the grades and none of them counts UP from the work.
+   *
+   * The two halves have different ages and the sentence has to say so: 98 is as of the last grading
+   * (the label above already carries that date), while the 29 is current, because a repair lands in
+   * history the day it happens. And it stays a CLAIM until a re-check agrees — which is the board's
+   * existing rule for `clears`, said once here in the one place a person will actually read it.
+   */
+  const claimedCleared = L.rows.reduce((n, r) =>
+    n + new Set(HIST.filter((h) => h.row === r.id && h.kind === 'fixed').flatMap((h) => h.clears ?? [])).size, 0);
+  const fixBar = !(toFix && claimedCleared) ? '' : `<div class="fix">
+    <div class="track"><span style="width:${Math.round((claimedCleared / toFix) * 100)}%"></span></div>
+    <p><b>${claimedCleared} of those ${toFix}</b> already have a repair claiming them —
+      a re-check is what turns a claim into a letter.</p></div>`;
+  document.getElementById('open').innerHTML = openBits.length
+    ? `<div class="lbl">still open${gradeDates.length ? `, as counted when the letters were set, ${esc(humanSpan(gradeDates[0], gradeDates[gradeDates.length - 1]))}` : ''}</div>
+       <ul class="facts">${openBits.map(([n, t]) => `<li><b>${esc(n)}</b><span>${esc(t)}</span></li>`).join('')}</ul>${fixBar}` : '';
+
+  /**
+   * The board, sectioned by WHAT NEEDS ATTENTION rather than shelved by letter.
+   *
+   * The tier shelves are gone deliberately. The letter is the least-moving thing on this page — the
+   * rules make it sticky on purpose — and on a freshly-graded project almost every row shares one
+   * value, so grouping by it spent the whole layout axis on a column of identical letters while
+   * three shelves rendered permanently empty. The letters are still here, on every card, and still
+   * sort the rows inside a section.
+   */
+  /**
+   * The ONE line that says what is true of a part right now — four states, four sentences.
+   *
+   * It replaces two labelled blocks, a quoted repair and a closing reminder that appeared on every
+   * one of fourteen cards. Repeating a sentence fourteen times does not make it fourteen facts; it
+   * makes the fourteen facts underneath it unreadable. The repair's own words are still on the part's
+   * page and in What's moved, where they are read once each.
+   */
+  const stateLine = (row) => {
+    const st = stateOf(row);
+    if (st === UNSEEN) return 'not graded';
+    if (st === DRIFTED) return 'nobody has looked since';
+    const need = row.next?.needs?.length ?? 0;
+    const to = need ? `${need} ${need === 1 ? 'thing' : 'things'} to reach ${row.next.floor}` : 'nothing standing in the way';
+    if (st === WAITING) {
+      const fixes = unverified(row);
+      // `clears` is a CLAIM the repair made about itself, so the tense says so: a repair "clears 7
+      // of 8" until a re-check agrees, at which point the list is rewritten anyway.
+      const claimed = new Set(fixes.flatMap((h) => h.clears ?? [])).size;
+      return `${fixes.length === 1 ? 'one repair' : word(fixes.length) + ' repairs'}${
+        claimed ? ` · ${fixes.length === 1 ? 'clears' : 'clear'} ${claimed} of ${need}` : ''}`;
+    }
+    const last = [...HIST].reverse().find((h) => h.row === row.id && GRADE_KINDS.has(h.kind));
+    return last?.kind === 'rechecked' ? `re-checked ${human(last.date)} · ${to}` : to;
+  };
+
+  const board = document.getElementById('board');
+  for (const [state, heading, blurb] of SECTIONS) {
+    // Group first, so the labels cluster into runs the eye can use; letter and name break ties as
+    // they always did. Grouping OUTSIDE the sections was the other option and it is wrong: the
+    // sections answer "is anyone looking after this", which is what the board is for, and two
+    // groupings cannot both be the outer one.
+    const rows = L.rows.filter((r) => stateOf(r) === state)
+      .sort((a, b) => groupRank(a) - groupRank(b)
+        || (RUNG[tier(a)] ?? -1) - (RUNG[tier(b)] ?? -1) || a.name.localeCompare(b.name));
+    if (!rows.length) continue; // an empty section is not news — unlike an empty tier shelf, which shouted
+    const sec = document.createElement('div');
+    sec.className = `tier state-${state}`;
+    sec.innerHTML = `<h2>${esc(heading)} <span class="n">${rows.length}</span></h2>
+      <p class="secsub">${esc(blurb)}</p>
+      <div class="parts"><div class="hdr"><span></span><span></span><span>feels</span><span>guts</span><span>should be</span><span class="pr">what it promises</span><span></span></div></div>`;
+    const list = sec.querySelector('.parts');
+    for (const row of rows) {
+      const g = gapOf(row);
+      const line = document.createElement('button');
+      line.className = 'line' + (row.crown ? ' crowned' : '') + (g === null ? '' : ` gap${Math.min(3, g)}`);
+      const letter = (l, s) => `<span class="g">${esc(l.grade ?? '·')}${s?.state === 'unknown' ? '<i>?</i>' : ''}</span>`;
+      // Rare, and each one is an honesty signal rather than decoration — so they appear on the line
+      // when true and take up no room at all when not.
+      const gone = missingParts(row).length;
+      const flags = [
+        gone ? `${gone} file${gone === 1 ? '' : 's'} gone` : '',
+        row.parts.length ? '' : 'watches no files',
+        (lookedAgo(row) ?? 0) > STALE_DAYS ? `not looked at in ${lookedAgo(row)} days` : '',
+      ].filter(Boolean);
+      // spans, not divs: a <button> may only hold phrasing content, and the row is one.
+      line.innerHTML = `<span class="bar"></span><span class="name">${esc(row.name)}${
+          row.group ? `<i>${esc(row.group)}</i>` : ''}</span>
+        ${letter(row.feels, letterState(row, 'feels'))}${letter(row.guts, letterState(row, 'guts'))}
+        <span class="goal">${row.target ? esc(GOAL[row.target] ?? row.target) : '<span class="unset">not set</span>'}</span>
+        <span class="promise">${esc(row.promise ?? '')}</span>
+        <span class="state">${esc(stateLine(row))}${flags.length ? ` <em>${esc(flags.join(' · '))}</em>` : ''}</span>`;
+      // The feels/guts headers are visual only — they sit once above the list, not on every row — so
+      // without this a screen reader reads two bare capital letters in the middle of a sentence.
+      // Same for the goal: "solid" alone in a row of letters is not a sentence.
+      line.setAttribute('aria-label',
+        `${row.name}${row.group ? ` (${row.group})` : ''} — feels ${row.feels.grade ?? 'not graded'}, guts ${
+          row.guts.grade ?? 'not graded'}, ${row.target ? WANT[row.target] ?? row.target : 'no expectation set'} — ${stateLine(row)}`);
+      line.onclick = () => openPart(row, line);
+      list.appendChild(line);
+    }
+    board.appendChild(sec);
+  }
+
+  const nameOf = (id) => L.rows.find((r) => r.id === id)?.name ?? id;
+  const rowBtn = (id) => `<button class="rowlink" data-row="${esc(id)}">${esc(nameOf(id))}</button>`;
+
+  /**
+   * HOW LUMIFY COMPARES — the field checks, promoted.
+   *
+   * Every grade included one, and every one of them was invisible unless you clicked into a part:
+   * on this project that is roughly 41,000 characters of the most readable writing on the board,
+   * with no presence at all on the front page. It is also the only section here that answers a
+   * question the letters cannot — not "is this good" but "is this good COMPARED TO WHAT".
+   *
+   * Each line is LIFTED from that row's own `standing` prose, never formed here; the row is the
+   * truth and this is its index, exactly as the roadmap stands to the rows. So a row that has been
+   * graded but whose field check came back empty simply contributes nothing, which is honest and
+   * needs no special case. Ahead is FIRST and wears the crown colour: the rest of this board counts
+   * what has been done and then renders only what is left over, and this is where that turns round.
+   */
+  const compare = document.getElementById('compare');
+  const verdicts = L.rows.flatMap((r) => (r.field?.verdict ?? []).map((v) => ({ ...v, id: r.id })));
+  const STANDS = [
+    ['ahead', 'ahead of the field', 'things nothing else surveyed does as well'],
+    ['level', 'level with the field', 'as good as the best out there, and no better'],
+    ['behind', 'behind the field', 'somebody else has already solved these'],
+  ];
+  const compareOn = verdicts.length > 0;
+  if (compareOn) {
+    const n = (s) => verdicts.filter((v) => v.stand === s).length;
+    // Counted, never written: a section whose whole job is to feel good is the first place a
+    // flattering number would appear, and a number that flatters you is one you stop checking.
+    compare.innerHTML = `<h2>How ${esc(L.project ?? 'this project')} compares to everything else out there</h2>
+      <div class="chead">
+        <p class="tally"><b>Ahead of the field on ${n('ahead')} things</b>, level on ${n('level')},
+          <span class="neg">behind on ${n('behind')}</span>.</p>
+        <p class="note">Every part was measured against the best thing out there that does the same job —
+          open-source and commercial, sources fetched on the day each check was written. These lines are
+          lifted from the checks themselves; click any part to read the evidence behind it.</p>
+      </div>
+      <div class="bands">${STANDS.map(([stand, heading, blurb]) => {
+        const rows = verdicts.filter((v) => v.stand === stand);
+        if (!rows.length) return '';
+        return `<div class="band ${stand}"><h3>${esc(heading)} <span class="n">${rows.length}</span></h3>
+          <p class="bsub">${esc(blurb)}</p>
+          ${rows.map((v) => `<div class="ln"><span class="stripe"></span>
+            <span class="cl">${rowBtn(v.id)}<span class="what">${esc(v.on)}</span></span></div>`).join('')}</div>`;
+      }).join('')}</div>`;
+    compare.addEventListener('click', (e) => {
+      const b = e.target.closest('.rowlink');
+      const row = b && L.rows.find((r) => r.id === b.dataset.row);
+      if (row) openPart(row, b);
+    });
+  }
+
+  // what to do — the roadmap, derived from these same rows. Row names are buttons: the whole reason
+  // this lives here rather than in a document is that a theme can hand you the evidence behind it.
+  const R = window.ROADMAP;
+  const plan = document.getElementById('roadmap');
+  if (!R) plan.innerHTML = '<p class="empty">No roadmap yet — it is written once every row has been graded.</p>';
+  else {
+    plan.innerHTML = `
+      <p class="lede">${esc(R.note)}</p>
+      ${R.themes.map((t, i) => `<section class="theme">
+        <h2><span class="n">${String(i + 1).padStart(2, '0')}</span>${esc(t.title)}</h2>
+        <div class="chips">${t.rows.map(rowBtn).join(' ')}</div>
+        ${t.why ? `<p class="why">${esc(t.why)}</p>` : ''}
+        ${t.evidence.length ? `<ul>${t.evidence.map((e) => `<li>${rowBtn(e.row)}<span>${esc(e.line)}</span></li>`).join('')}</ul>` : ''}
+        ${t.worst ? `<p class="worst">${esc(t.worst)}</p>` : ''}
+        ${t.buys ? `<p class="buys">What fixing it buys: ${esc(t.buys)}</p>` : ''}
+      </section>`).join('')}
+      <section class="order"><h3>The order</h3><ol>${R.order.map((o) => `<li>
+        <span class="${o.done ? 'done' : ''}">${esc(o.text)}</span>
+        ${o.done ? `<span class="donenote">Done ${esc(o.done.date)} · <span class="mono">${esc(o.done.commit)}</span>${o.done.note ? ' — ' + esc(o.done.note) : ''}</span>` : ''}
+      </li>`).join('')}</ol></section>
+      <section class="order"><h3>Not here on purpose</h3><p class="why">${esc(R.notHere)}</p></section>`;
+    plan.addEventListener('click', (e) => {
+      const b = e.target.closest('.rowlink');
+      if (!b) return;
+      const row = L.rows.find((r) => r.id === b.dataset.row);
+      if (row) openPart(row, b);
+    });
+  }
+
+  // what's moved — the only view that cannot be flattered after the fact
+  const H = HIST.slice().reverse();
+  const movedEl = document.getElementById('moved');
+  const BACK_WORD = { board: 'all parts', plan: 'what to do', moved: "what's moved" };
+  // 'described' is its own kind because it is its own event: a part can be checked without anyone
+  // ever writing down what it IS, and on this project every row sat that way for two days.
+  // 'rechecked' is the PAYOFF of the whole loop and it had no name until now: a part re-checked
+  // after a repair, where the letters held. Without it the only recordable outcomes were "grade
+  // changed" and nothing, so the day a repair was verified and the letter stayed put — which is a
+  // real, good result — left no trace anywhere on the board.
+  // 'mapped' is the first entry every project ever writes and it had no word here, so a brand-new
+  // board's only line of history rendered the raw code word — found on the fresh-project fixture.
+  // GROUPED BY DAY, and each entry given its own width. This is the only view whose content is
+  // WRITTEN rather than counted — every line of it is a sentence somebody composed about what they
+  // measured — and it used to render as thirty-one identical rows with the date in 12px monospace,
+  // which is a log. A log is for finding one line; this is for reading four days.
+  const byDay = [];
+  for (const h of H) {
+    const last = byDay[byDay.length - 1];
+    if (last && last.date === h.date) last.items.push(h); else byDay.push({ date: h.date, items: [h] });
+  }
+  const iso = (d) => new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const today = iso(new Date()), yday = iso(new Date(Date.now() - 86400000));
+  const dayName = (d) => (d === today ? 'Today' : d === yday ? 'Yesterday' : human(d));
+  movedEl.innerHTML = H.length
+    ? `<p class="lede">Every time a part was checked, re-graded or repaired. Nothing is ever edited out of this list — a
+snapshot can be made to look fine, so this is the part of the board that shows whether anyone is looking after the place.</p>
+       ${byDay.map((d) => `<section class="day">
+         <h2>${esc(dayName(d.date))} <span class="n">${esc(d.date)}</span></h2>
+         ${d.items.map((h) => `<div class="ev${freshSet.has(fingerprint(h)) ? ' is-fresh' : ''}">
+           <div class="head">
+             <span class="kind ${esc(h.kind)}">${esc(KIND_WORD[h.kind] ?? h.kind)}</span>
+             ${h.row === 'ALL' ? '<b>every remaining part</b>' : rowBtn(h.row)}
+             ${h.feels ? `<span class="chip">${h.from ? esc(h.from) + ' → ' : ''}<b>${esc(h.feels)}/${esc(h.guts)}</b></span>` : ''}
+           </div>
+           <p class="what">${esc(h.what)}</p>
+           <div class="mono when">${esc(h.commit)}</div>
+         </div>`).join('')}
+       </section>`).join('')}`
+    : '<p class="empty">Nothing has moved yet.</p>';
+  movedEl.addEventListener('click', (e) => {
+    const b = e.target.closest('.rowlink');
+    const row = b && L.rows.find((r) => r.id === b.dataset.row);
+    if (row) openPart(row, b);
+  });
+
+  // ONE next action. The roadmap's order is already a decision someone made from the evidence, so
+  // the first unfinished step in it IS the answer — showing all six themes instead just hands the
+  // reader the deciding back.
+  const nextStep = (R?.order ?? []).find((o) => !o.done);
+  if (nextStep) {
+    const theme = R.themes.find((t) => t.id === nextStep.theme);
+    const behind = theme ? theme.rows.filter((id) => { const r = L.rows.find((x) => x.id === id); return r && !atTarget(r); }) : [];
+    /**
+     * A SECOND recommendation, and it is the one the board could not make before: a row whose
+     * repair is finished and which the current job does NOT hold is ready to be re-checked, and a
+     * re-check is the only thing that turns a repair into a letter. Rows the current theme still
+     * holds are deliberately left alone — re-checking is expensive, so it happens once per finished
+     * job, never once per repair. (Written by hand the first time this came up, which is exactly
+     * the reasoning that belongs on the page instead.)
+     */
+    const held = new Set(theme?.rows ?? []);
+    const ready = waiting.filter((r) => !held.has(r.id));
+    document.getElementById('donext').hidden = false;
+    document.getElementById('donext').innerHTML = `
+      <div class="lbl">Do this next</div>
+      <div class="what">${esc(nextStep.text)}</div>
+      ${theme ? `<div class="why">It shows up in ${theme.rows.length} parts${behind.length ? `, ${behind.length} of them still short of their target` : ''} — one job, not ${theme.rows.length}.</div>
+      <div class="chips" style="margin-top:8px">${theme.rows.map(rowBtn).join(' ')}</div>` : ''}
+      ${ready.length ? `<div class="also"><div class="lbl">And this is ready</div>
+        <div class="why">${cap(word(ready.length))} ${ready.length === 1 ? 'part has a repair that is' : 'parts have repairs that are'} finished
+        and ${ready.length === 1 ? 'sits' : 'sit'} outside the job above — a re-check is the only thing that turns ${ready.length === 1 ? 'it' : 'them'} into a letter.
+        ${waiting.length > ready.length ? `The other ${waiting.length - ready.length} wait for that job to land, rather than being re-checked one repair at a time.` : ''}</div>
+        <div class="chips">${ready.map((r) => rowBtn(r.id)).join(' ')}</div></div>` : ''}`;
+    document.getElementById('donext').addEventListener('click', (e) => {
+      const b = e.target.closest('.rowlink');
+      const row = b && L.rows.find((r) => r.id === b.dataset.row);
+      if (row) openPart(row, b);
+    });
+  }
+
+  const tabs = { board: document.getElementById('tab-board'), plan: document.getElementById('tab-plan'), moved: document.getElementById('tab-moved') };
+  const legend = document.getElementById('legend');
+  legend.hidden = !L.rows.some((r) => gapOf(r) !== null); // only means something once expectations exist
+  const legendOn = !legend.hidden;
+  // The letters key follows a DIFFERENT rule to the colour legend beside it: the colours mean
+  // nothing until somebody has set an expectation, but a letter needs explaining the moment the
+  // first one is on screen — and on a freshly mapped project neither is true yet.
+  const keys = document.getElementById('keys');
+  const keysOn = L.rows.some(graded);
+  const partEl = document.getElementById('part');
+  const pageTitle = document.title;
+  // The masthead is the board's, not a part's: on a part page it would offer three tabs that all
+  // mean "leave", beside a progress bar about a project you are no longer looking at.
+  const masthead = document.querySelector('header');
+  const show = (which) => {
+    board.hidden = which !== 'board';
+    legend.hidden = !legendOn || which !== 'board';
+    keys.hidden = !keysOn || which !== 'board';
+    compare.hidden = !compareOn || which !== 'board';
+    plan.hidden = which !== 'plan';
+    movedEl.hidden = which !== 'moved';
+    partEl.hidden = which !== 'part';
+    masthead.hidden = which === 'part';
+    for (const [k, el] of Object.entries(tabs)) el.setAttribute('aria-pressed', String(k === which));
+    // The mark moves when What's moved is OPENED, not on load — a glance at the front page must not
+    // silently spend the news it has just advertised.
+    if (which === 'moved' && HIST.length) remember.set(SEEN_KEY, fingerprint(HIST[HIST.length - 1]));
+  };
+  // The tabs live inside the masthead, so they are unreachable from a part page — which is why a
+  // tab click never has to think about the hash.
+  for (const k of Object.keys(tabs)) tabs[k].onclick = () => show(k);
+  // Two of the four numbers have somewhere to go, so they go there. The other two are counted across
+  // every part and have no single home, so they are not links and do not pretend to be.
+  document.getElementById('record').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-go]');
+    if (b) { show(b.dataset.go); scrollTo(0, 0); }
+  });
+
+  // ROUTING. The hash is the only truth about whether a part is open: `#part/<id>` or nothing.
+  // Path-style addresses (history.pushState(…, 'part/search')) throw a SecurityError on a page
+  // opened from disk — measured — and this page opens from disk by design, with no server.
+  // `cameFrom` is what makes back honest: a part reached from the plan must return to the plan.
+  let cameFrom = 'board';
+  let opener = null;
+  let pushed = false; // did WE put a part on the history stack, or did the reader arrive on one?
+  const openPart = (row, from) => {
+    cameFrom = [...Object.keys(tabs)].find((k) => tabs[k].getAttribute('aria-pressed') === 'true') ?? 'board';
+    opener = from ?? null;
+    history.pushState({ part: row.id }, '', '#part/' + encodeURIComponent(row.id));
+    pushed = true;
+    renderPart(row);
+  };
+  // Going back only works if there is a back. Someone who OPENS a pasted link is on the first entry
+  // of a fresh tab, so `history.back()` leaves the page entirely — and since the masthead is hidden
+  // on a part page, that reader had no other way to the board at all.
+  const leavePart = () => {
+    if (pushed) return history.back();
+    history.replaceState(null, '', location.pathname);
+    route();
+  };
+  // Every arrival at a part goes through here, including a pasted link and the back button, so the
+  // page can never be shown by one route and skipped by another.
+  const route = () => {
+    const m = /^#part\/(.+)$/.exec(location.hash);
+    const row = m && L.rows.find((r) => r.id === decodeURIComponent(m[1]));
+    if (row) return renderPart(row);
+    show(cameFrom);
+    document.title = pageTitle;
+    scrollTo(0, 0);
+    opener?.focus(); // back from a part puts you on the card you left from, not at the top of a list
+    opener = null;
+  };
+  addEventListener('popstate', route);
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && location.hash) leavePart(); });
+  function letterHtml(label, l, s) {
+    if (!s) return `<section><h3>${label}</h3><div class="empty">ungraded</div></section>`;
+    return `<section><h3>${label} — ${esc(l.grade)}${s.state === 'unknown' ? ' ?' : ''}</h3>
+      <div class="proof">${esc(l.proof)}</div>
+      <div class="mono" style="margin-top:6px;color:var(--muted)">${esc(l.date)} · ${esc((l.commit || '').slice(0, 7))}</div>
+      ${s.note ? `<div class="mono" style="color:var(--${s.state === 'unknown' ? 'muted' : 'recheck'})">${esc(s.note)}</div>` : ''}</section>`;
+  }
+  function renderPart(row) {
+   try {
+    const st = S?.rows?.[row.id];
+    const changed = new Set([...(st?.feels?.changed ?? []), ...(st?.guts?.changed ?? [])]);
+    // A parts entry ending in '/' means everything under it; git reports the files inside.
+    const touched = (p) => changed.has(p) || (p.endsWith('/') && [...changed].some((c) => c.startsWith(p)));
+    const gone = missingParts(row);
+    const f = row.field;
+    // The explanation lives in its OWN file: it is the only prose on this board long enough to
+    // contain a stray backtick, and in ladder.js that mistake takes the whole board down with it.
+    // A file that FAILED to parse leaves EXPLAIN undefined, while a project that has simply not
+    // written any descriptions yet has `{}`. Those two must not read the same: this board's whole
+    // claim is that its empty states are true ones, and "nobody has written this" over a broken
+    // file is the exact lie it exists to avoid.
+    const xBroken = window.EXPLAIN === undefined;
+    const x = window.EXPLAIN?.[row.id];
+    const xStale = S?.rows?.[row.id]?.explain;
+    // Provenance belongs to the ENTRY, not to the paragraphs: a row can carry traps and no
+    // description yet, and that entry still has a date and can still go out of date.
+    const written = !x ? '' : `<div class="mono" style="margin-top:10px;color:var(--muted)">written ${esc(x.date ?? '')}${x.commit ? ` · ${esc(x.commit.slice(0, 7))}` : ''}</div>
+      ${xStale?.changed?.length ? `<div class="mono warn">written before ${xStale.changed.length} of this part's files changed — some of it may be out of date</div>` : ''}
+      ${xStale?.error ? `<div class="mono warn">${esc(xStale.error)}</div>` : ''}`;
+    partEl.innerHTML = `
+      <button class="back">← ${esc(BACK_WORD[cameFrom] ?? 'back')}</button>
+      <h2>${esc(row.name)}${row.crown ? ' <span style="color:var(--s)">♛</span>' : ''}</h2>
+      <div class="promise">${esc(row.promise)}</div>
+      <section><h3>How it works</h3>${x?.how
+        ? `<div class="how">${esc(x.how)}</div>${written}`
+        : `<div class="${xBroken ? 'mono warn' : 'empty'}">${xBroken
+            ? 'explain.js did not load — every part on this board will say it has no description until that is fixed, which is NOT the same as not having one. Open the browser console (F12) for the line.'
+            : graded(row)
+            ? 'This part was checked before the board could hold a description. The next check of it writes one.'
+            : 'Not written yet. A description is written by a real check, so that nothing on this board is something nobody verified.'}</div>`}</section>
+      <section><h3>What has surprised people here</h3>${x?.traps?.length
+        ? `<div class="why" style="color:var(--muted);margin-bottom:12px">Things that would catch out the next person, and that stay true even after every defect below is fixed.
+Anything that should simply be FIXED is in the list of what this part needs, further down.</div>
+           ${x.traps.map((t) => `<div class="trap"><div class="what">${esc(t.what)}</div>
+             <div class="why">${esc(t.why)}</div>
+             <div class="mono" style="color:var(--muted)">${[t.where, t.since].filter(Boolean).map(esc).join(' · ')}</div></div>`).join('')}
+           ${x.how ? '' : written}`
+        : `<div class="empty">${graded(row) ? 'Nothing surprising was written down for this part.' : 'Nothing yet — these are recorded by a check.'}</div>`}</section>
+      <section><h3>What it should be</h3><div>${row.target ? esc(WANT[row.target] ?? row.target) : '<span class="empty">not set yet</span>'}${row.crown ? ` · crowned ${esc(row.crown.date)}` : ''}</div>
+        ${row.targetWhy ? `<div class="why" style="margin-top:6px;color:var(--muted)">${esc(row.targetWhy)}</div>` : ''}
+        ${row.targetWhy ? '<div class="mono" style="margin-top:6px;color:var(--dim)">proposed by the review from evidence — say so if it is wrong about your life</div>' : ''}
+        ${row.crown ? `<div class="proof" style="margin-top:6px">${esc(row.crown.proof)}</div>` : ''}
+        ${row.crown && !crowned(row) ? '<div class="mono warn" style="margin-top:6px">crowned in the data, but S needs both letters at A — shown at its real tier.</div>' : ''}</section>
+      ${letterHtml('Feels', row.feels, letterState(row, 'feels'))}
+      ${letterHtml('Guts', row.guts, letterState(row, 'guts'))}
+      ${row.exams?.length ? `<section><h3>Standing exam${row.exams.length > 1 ? 's' : ''}</h3>
+        <div class="why" style="color:var(--muted);margin-bottom:8px">Re-run at the start of every future check. A check only earns
+a place here by having caught a real defect — that is what stops this becoming a checklist.</div>
+        <ol>${row.exams.map((e) => `<li style="font:inherit;color:var(--ink);margin-bottom:10px">${esc(e.check)}
+          <div class="why" style="color:var(--muted)">${esc(e.earnedBy)} <span class="mono">${esc(e.since)}</span></div></li>`).join('')}</ol></section>` : ''}
+      <section><h3>What this check did NOT look at</h3>${row.notExamined
+        ? `<div>${esc(row.notExamined)}</div>`
+        : '<div class="empty">this grade did not say what it skipped — treat its coverage as unknown</div>'}</section>
+      ${row.next ? `<section class="next"><h3>To reach ${esc(row.next.floor)}</h3>
+        <ol>${row.next.needs.map((n) => `<li>${esc(n.replace(/\s*\n\s*/g, ' '))}</li>`).join('')}</ol>
+        <div class="mono" style="margin-top:8px;color:var(--muted)">a floor is a gate — every item, then re-run the check that failed</div></section>` : ''}
+      <section><h3>The field</h3>${f.best
+        ? `<div><b>Best out there:</b> ${esc(f.best)}</div><div><b>Where we stand:</b> ${esc(f.standing)}</div>
+           <div><b>The trade:</b> ${esc(f.trade)}</div><div class="mono" style="margin-top:6px;color:var(--muted)">${esc(f.date)}</div>`
+        : '<div class="empty">not yet researched</div>'}</section>
+      ${(() => {
+        // The record of who has been paying attention sits ABOVE the file list on purpose: the
+        // question this board answers is neglect, and the one section she cannot read should not
+        // outrank the one that answers it. The link out to the theme is here for the same reason —
+        // a part is rarely broken on its own.
+        const mine = (window.ROADMAP?.themes ?? []).filter((t) => t.rows.includes(row.id));
+        const events = (window.HISTORY ?? []).filter((h) => h.row === row.id || h.row === 'ALL');
+        return `${events.length ? `<section><h3>What's moved here</h3><ul>${events.slice().reverse().map((h) =>
+          `<li style="font-family:inherit;font-size:inherit;color:var(--ink)">${esc(h.date)} — ${esc(KIND_WORD[h.kind] ?? h.kind)}${h.feels ? ` to ${esc(h.feels)}/${esc(h.guts)}` : ''}</li>`).join('')}</ul></section>` : ''}
+        ${mine.length ? `<section><h3>Part of a bigger problem</h3>
+          <div class="chips">${mine.map((t) => `<button class="rowlink" data-theme="${esc(t.id)}">${esc(t.title)}</button>`).join(' ')}</div></section>` : ''}`;
+      })()}
+      <section><h3>The files (${row.parts.length})</h3><ul>${row.parts
+        .map((p) => `<li class="${gone.includes(p) ? 'gone' : touched(p) ? 'changed' : ''}">${esc(p)}</li>`).join('')}</ul>
+        ${gone.length ? `<div class="mono warn" style="margin-top:8px">gone at HEAD: ${esc(gone.join(', '))} — renamed or deleted, so this row no longer watches them.</div>` : ''}</section>
+      ${row.notes ? `<section><details><summary><h3 style="display:inline">Raw notes from the checks</h3></summary>
+        <div class="how" style="margin-top:10px">${esc(row.notes)}</div></details>
+        <div class="mono" style="color:var(--muted);margin-top:8px">everything a check wrote down and did not file anywhere else — the surprises above are drawn from this</div></section>` : ''}`;
+    // a theme button takes you to that theme in the plan, which is the trip a reader actually wants
+    // to make: "this part is broken" → "…and here is the problem it belongs to"
+    for (const b of partEl.querySelectorAll('[data-theme]')) {
+      b.onclick = () => {
+        cameFrom = 'plan'; // going forward to the plan, so back from here means the plan
+        leavePart();
+        setTimeout(() => document.querySelectorAll('.theme').forEach((el, i) => {
+          if ((window.ROADMAP?.themes ?? [])[i]?.id === b.dataset.theme) el.scrollIntoView({ block: 'start' });
+        }), 0); // after popstate has switched the view, or there is nothing on screen to scroll to
+      };
+    }
+    partEl.querySelector('.back').onclick = leavePart;
+    show('part');
+    // The tab, the history entry and a screen reader's page label all read the title. Leaving it on
+    // the board's makes every part indistinguishable in all three.
+    document.title = `${row.name} — ${pageTitle}`;
+    scrollTo(0, 0); // arriving at a page halfway down it is the oldest bug in single-page navigation
+    partEl.querySelector('h2').setAttribute('tabindex', '-1');
+    partEl.querySelector('h2').focus();
+   } catch (e) {
+    // This runs on every navigation, i.e. OUTSIDE the one-shot guard that wraps first paint — so it
+    // needs its own, or a bad row takes down a board that had already rendered fine.
+    partEl.innerHTML = `<button class="back">← back</button><div class="broken"><b>This part could not be shown.</b>
+      <div class="mono">${esc(e && e.message ? e.message : e)}</div>
+      <p>The rest of the board is unaffected. The likeliest cause is <b>explain.js</b> — check that
+      this part's entry has the same shape as its neighbours.</p></div>`;
+    partEl.querySelector('.back').onclick = leavePart;
+    show('part');
+   }
+  }
+
+  // Last, because it may paint a part page and everything above has to exist first. A pasted
+  // #part/... link lands on that part; anything else lands on the board.
+  route();
+  } catch (e) {
+    // message FIRST — nothing after it may be what stops it being written
+    document.getElementById('board').innerHTML = `<div class="broken">
+      <b>The board could not render.</b>
+      <div class="mono">${esc(e && e.message ? e.message : e)}</div>
+      <p>The suspects are the two files written by hand. <b>ladder.js</b>: a syntax error — a stray comma,
+      or an unescaped quote or backslash inside a proof string. <b>history.js</b>: it must be an ARRAY of
+      entries, and anything else fails later and further away than it happened. Open the browser console
+      (F12) for the file and line number. Failing both, a half-written <b>staleness.js</b>: delete it and
+      re-run <span class="mono">node docs/quality/refresh.mjs</span>.</p></div>`;
+    // NOTHING ELSE GOES HERE. This block is the one thing on the page that must not itself fail, and
+    // it used to end by hiding `.progress` — an element the previous redesign had already removed —
+    // so the failure message threw a TypeError while rendering itself and the reader got a blank
+    // page with no explanation, which is the exact outcome the guard exists to prevent.
+  }
+</script>
+</body>
+</html>
