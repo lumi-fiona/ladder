@@ -41,6 +41,9 @@ for a famous song is ordinary use. Feeding it a malformed URL is not.
 
 2. **Re-run the row's standing exams first** (see below). They are the checks earlier grades earned
    by catching real defects. A failure here is a finding before you have looked at anything else.
+   **Then re-verify every item already on the row's `next` list, one by one, before you write a new
+   one** — see *The list rots faster than the letters* below. Carrying one forward unchecked is the
+   commonest way this board goes quietly wrong.
 
 3. **Read the parts, then run their tests.** Record the count and that they passed. Note whether the
    tests encode real incidents or invented strings — fixtures named after bugs that actually happened
@@ -133,6 +136,37 @@ for a famous song is ordinary use. Feeding it a malformed URL is not.
     and the `commit` you graded at. Proof text is plain language for a non-technical owner: name the
     command, name the actual wrong output, no jargon. Re-run `refresh.mjs`, open the board, click
     into the row's own page and READ it as the owner would.
+
+## The list rots faster than the letters
+
+A letter is a claim about a moment and it says which moment. **`next.needs` is written in the present
+tense and nothing dates it**, so it is read as "what is wrong with this part today" long after that
+stopped being true. Measured on the second project, 2026-08-13: **47 of 105 open items were already
+repaired** — most of them hours before the letters describing them were written, by commits the
+grading sessions were sitting directly on top of. Two independent re-derivations of "what should we
+do next" then both named an already-reverted change as the top priority, because both read the board.
+
+Three rules, and they cost minutes:
+
+- **Re-verify every item you carry forward, and count both numbers.** Say in the proof how many items
+  the row had and how many you re-checked. If those differ, the list is a claim you did not make.
+  Per item: find the code by NAME (never by the item's line numbers — they are days old), and if it
+  looks handled, prove WHEN with `git log -S '<distinctive string>' --oneline` followed by
+  `git merge-base --is-ancestor <fix> <the commit you are grading at>`. An ancestor means the board
+  was already stale when it was written, which is a finding about the board, not about the code.
+- **A search can match a comment that documents a removal.** One item survived three gradings because
+  the word it was grepped for lived in the sentence explaining that the thing had been taken out.
+  Look at what the matched line actually is.
+- **Stamp the commit the EVIDENCE came from, not the one you happened to write at.** A session that
+  gathers findings on Monday and writes them on Wednesday, over two nights of repairs, produces a row
+  whose header says Wednesday and whose contents describe Monday. If the tree moved under you
+  mid-session, either re-check against the new code or say in the proof which parts of it predate the
+  move — and prefer the first, because nobody reads the second.
+
+The same rot reaches `feels`/`guts` proofs and `field.standing`, which quote defects in the present
+tense. When an item retires, read the proof paragraphs that named it: leave the wording of the
+measurement alone (it is a record of what was true then) and strike any clause that asserts the
+defect is still there.
 
 ## Standing exams: the part keeps what caught it
 
@@ -234,7 +268,11 @@ Both go in `history.js`, append-only, in its own plain voice.
 - **A repair** is `kind: 'fixed'`, and it may carry **`clears: [0, 4]`** — the INDEXES of the items
   in that row's `next.needs` *as currently written* that the repair believes it addressed. It is a
   claim, not a fact, and the board renders it as one ("says it clears 2 of the 8"). Indexes are safe
-  only because they die with the next re-grade, which rewrites the list. Leave it off when a repair
+  only because they die with the next re-grade, which rewrites the list. **Anything else that
+  rewrites a list must kill them too** — a sweep that retires stale items is exactly that event, and
+  leaving the old indexes behind had one board announcing that 51 of its 58 open items already had a
+  repair claiming them when the honest number was 6. Drop the `clears` key from the older entries and
+  leave every word of their text alone: the record is the sentence, not the pointer. Leave it off when a repair
   does not map cleanly onto a listed item — an absent `clears` reads honestly as "a repair landed,
   the count does not know about it yet".
 - **A re-check** has two possible kinds and BOTH must be recorded. `kind: 'regraded'` when a letter
