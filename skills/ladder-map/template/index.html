@@ -305,9 +305,13 @@
   .legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; }
   .legend .g0::before { background: var(--a); } .legend .g1::before { background: var(--recheck); }
   .legend .g2::before { background: #c4553d; } .legend .g3::before { background: #b23a2a; }
-  /* What the letters MEAN. The board showed fourteen of them and never once said what one was worth,
-     which is the one thing a person who does not read the code cannot work out for themselves. */
+  /* What the letters MEAN, and then what the two COLUMNS mean. The board showed fourteen letters and
+     never said what one was worth; the second line was the same omission one level up — `feels` and
+     `guts` head a column on every row and were explained nowhere a reader could reach. Both are the
+     one thing a person who does not read the code cannot work out for themselves. */
   .keys { color: var(--muted); font-size: 13px; margin: 0 0 var(--s5); line-height: 1.7; }
+  .keys span { display: block; max-width: 105ch; }
+  .keys span + span { margin-top: var(--s1); }
   .keys b { font-family: var(--mono); color: var(--ink); font-weight: 600; }
   /* HOW LUMIFY COMPARES — the field checks, which were ~41,000 characters of the most readable
      writing on this board and had no presence at all on the front page. Every line here is LIFTED
@@ -473,7 +477,7 @@
   </div>
   </div>
 </header>
-<main class="wrap"><section class="compare" id="compare" hidden></section><div class="legend" id="legend" hidden><span class="g0">where it should be</span><span class="g1">one step short</span><span class="g2">two steps short</span><span class="g3">three steps short</span></div><p class="keys" id="keys" hidden><b>C</b> it works · <b>B</b> nothing a person would meet in ordinary use is wrong · <b>A</b> it survived someone actively trying to break it · <b>S</b> the crown, and only you can grant it</p><div class="board" id="board"></div><div class="roadmap" id="roadmap" hidden></div><div class="roadmap" id="moved" hidden></div><div id="part" hidden></div></main>
+<main class="wrap"><section class="compare" id="compare" hidden></section><div class="legend" id="legend" hidden><span class="g0">where it should be</span><span class="g1">one step short</span><span class="g2">two steps short</span><span class="g3">three steps short</span></div><p class="keys" id="keys" hidden><span><b>C</b> it works · <b>B</b> nothing a person would meet in ordinary use is wrong · <b>A</b> it survived someone actively trying to break it · <b>S</b> the crown, and only you can grant it</span><span>Every part carries both letters: <b>feels</b> is what it is like to use, <b>guts</b> is how the code underneath holds up. A <b>re-check</b> is somebody grading a part again — the only thing that ever moves a letter.</span></p><div class="board" id="board"></div><div class="roadmap" id="roadmap" hidden></div><div class="roadmap" id="moved" hidden></div><div id="part" hidden></div></main>
 <script src="ladder.js"></script>
 <!-- explain.js is SEPARATE from ladder.js on purpose: it is the only file here holding paragraphs,
      and one stray backtick in ladder.js blanks the entire board. Here it loses only the writing. -->
@@ -607,7 +611,11 @@
   const sub = document.getElementById('sub');
   const bits = [`<span>${esc(L.rows.length)} rows · two letters each · S is the crown</span>`];
   // Both fields checked, not just S: a torn or half-written staleness.js must degrade to "unknown".
-  if (S?.head && S?.generatedAt) bits.push(`<span class="mono" title="Staleness compares each grade's commit to HEAD. Edits you have not committed yet are invisible to it.">head ${esc(S.head.slice(0, 7))} · staleness ${esc(S.generatedAt.slice(0, 16))} · committed history only</span>`);
+  // Was: "head 0b195e9 · staleness 2026-08-12 16:56 · committed history only". Three pieces of
+  // machine vocabulary in the most prominent secondary line on a page written for someone who may
+  // not read code — and the tooltip that explained it cannot be reached on a touch screen. Same
+  // three facts, said in words, with the commit kept because it is genuinely a reference.
+  if (S?.head && S?.generatedAt) bits.push(`<span class="mono" title="Each grade records the commit it was made at; this page compares those against the current one.">checked against your code at ${esc(S.head.slice(0, 7))}, ${esc(S.generatedAt.slice(0, 16))} · anything not yet committed is invisible to it</span>`);
   else bits.push(`<span class="hint">staleness unknown — run <span class="mono">node docs/quality/refresh.mjs</span></span>`);
   // Its OWN span, outside that either/or: a board with no staleness computed yet still has an age,
   // and the day you most want to know how old the page is, is the day something else is wrong too.
@@ -691,7 +699,9 @@
   const SECTIONS = [
     [WAITING, 'Waiting for a re-check', 'repairs landed here after the letters were set, so the letters do not know about them yet'],
     [DRIFTED, 'Changed underneath', 'no repair of their own — work on other parts touched their files'],
-    [SETTLED, 'Current', 'nothing has changed since these letters were set'],
+    // "Current" was the odd one out: the other three name a STATE a person can picture, and this one
+    // named a category. What it means is that nobody has touched these files since the grade.
+    [SETTLED, 'Up to date', 'nothing has changed since these letters were set'],
     [UNSEEN, 'Not looked at yet', 'no letters, so nothing on this page speaks for them'],
   ];
 
@@ -777,9 +787,12 @@
   // there" is the whole comparison section below. A caption that narrates what the reader can
   // already see is the cheapest kind of clutter, because it looks like content.
   const caption = [
+    // NOT "n of them": the two counts have different denominators — a write-up survives its row
+    // being re-graded, so this could say "fourteen of them" about twelve parts, which it did on a
+    // board built to test exactly this. Stating the count alone is true whatever the other number is.
     nWritten ? (nWritten === nGraded
       ? 'Every part has also been written up in plain words.'
-      : `${cap(word(nWritten))} of them have also been written up in plain words.`) : '',
+      : `${cap(word(nWritten))} ${nWritten === 1 ? 'part has' : 'parts have'} also been written up in plain words.`) : '',
     verifiedFixes.length ? `${cap(word(verifiedFixes.length))} ${verifiedFixes.length === 1 ? 'repair has' : 'repairs have'} already been back through a re-check.` : '',
   ].filter(Boolean).join(' ');
 
@@ -851,7 +864,10 @@
    */
   const stateLine = (row) => {
     const st = stateOf(row);
-    if (st === UNSEEN) return 'not graded';
+    // These two are a PAIR and now read as one: same verb, one word apart. "not graded" sat under a
+    // heading that says "Not looked at yet", so the row restated the section in a different
+    // vocabulary — and the board already calls this one act checking, looking at AND grading.
+    if (st === UNSEEN) return 'nobody has looked yet';
     if (st === DRIFTED) return 'nobody has looked since';
     const need = row.next?.needs?.length ?? 0;
     const to = need ? `${need} ${need === 1 ? 'thing' : 'things'} to reach ${row.next.floor}` : 'nothing standing in the way';
@@ -907,8 +923,8 @@
       // without this a screen reader reads two bare capital letters in the middle of a sentence.
       // Same for the goal: "solid" alone in a row of letters is not a sentence.
       line.setAttribute('aria-label',
-        `${row.name}${row.group ? ` (${row.group})` : ''} — feels ${row.feels.grade ?? 'not graded'}, guts ${
-          row.guts.grade ?? 'not graded'}, ${row.target ? WANT[row.target] ?? row.target : 'no expectation set'} — ${stateLine(row)}`);
+        `${row.name}${row.group ? ` (${row.group})` : ''} — feels ${row.feels.grade ?? 'not graded yet'}, guts ${
+          row.guts.grade ?? 'not graded yet'}, ${row.target ? WANT[row.target] ?? row.target : 'no expectation set'} — ${stateLine(row)}`);
       line.onclick = () => openPart(row, line);
       list.appendChild(line);
     }
