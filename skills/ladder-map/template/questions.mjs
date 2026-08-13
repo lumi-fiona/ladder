@@ -46,6 +46,17 @@ export function checkQuestions(list) {
     }
     if (!KINDS.includes(q.kind)) return `${at} is a "${q.kind}" — it must be one of ${KINDS.join(', ')} (priority is never asked: the board's own order answers it)`;
     if (!STATES.includes(q.state)) return `${at} is "${q.state}" — it must be decided or waiting`;
+    // An ABSENT `acted` is the ordinary state — nothing has been done about the answer yet, and the
+    // page says exactly that. A present but empty one is a receipt that claims something happened and
+    // does not say what, which is the one thing this board never prints.
+    if (q.acted != null && !String(q.acted).trim()) {
+      return `${at} carries an empty acted line — say in one line what the run did about the answer, or leave the field off`;
+    }
+    // A receipt for an answer nobody gave. It reads as settled on the page and there is nothing it
+    // could be true about, so it is caught here rather than rendered.
+    if (q.acted != null && q.answer == null) {
+      return `${at} says what a run did about an answer it has not been given — an acted line needs an answer above it`;
+    }
   }
   return null;
 }
@@ -79,6 +90,12 @@ export const HEADER = `// Questions the board is holding for its owner — see i
 //   options     2–4 concrete answers, so the page can offer buttons; free text always works too
 //   answer      null until the owner says; written by serve.mjs
 //   answeredAt  the day they said it
+//   acted       what the run that read the answer DID about it — one plain line, written by that run
+//   actedAt     the day it did it
+//
+// Any answer other than "kept" stays on the page under "Waiting on the next run" until a run writes
+// \`acted\`. That is the whole test this tab is kept on: an answer nobody acts on is worse than no
+// answer, because it teaches the owner the page is decorative. Agreeing needs no receipt.
 //
 // To answer from the page rather than by hand: double-click board.cmd (or run \`node serve.mjs\`).
 // Opening index.html straight from disk shows everything but cannot save an answer, so it offers no

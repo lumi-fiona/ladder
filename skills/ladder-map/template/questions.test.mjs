@@ -78,3 +78,28 @@ test('a round trip through the file keeps every field', () => {
   const [q] = parseQuestions(serialize([ENTRY]));
   assert.deepEqual(q, ENTRY);
 });
+
+// An ABSENT receipt is the ordinary state and the page says so in its own words. A present but empty
+// one claims something happened about the answer without saying what, which is the one shape of
+// sentence this board never prints.
+// Both fixtures carry an ANSWER: without one the sibling rule below fires instead, its message also
+// says "acted", and this test then passes with the rule it is named after deleted (measured).
+test('an empty receipt is refused and an absent one is fine', () => {
+  assert.match(checkQuestions([{ ...ENTRY, answer: 'no', acted: '   ' }]), /empty acted/);
+  assert.equal(checkQuestions([{ ...ENTRY, answer: 'no', acted: null }]), null);
+  assert.equal(checkQuestions([{ ...ENTRY, answer: 'no', acted: 'Removed the button and shipped it.' }]), null);
+});
+
+// It renders as settled and there is nothing it could be true about.
+test('a receipt for an answer nobody gave is refused', () => {
+  assert.match(checkQuestions([{ ...ENTRY, answer: null, acted: 'Rebuilt it.' }]), /answer/);
+});
+
+// The file is rewritten WHOLE on every answer, so somebody clicking Fine on one question must not
+// quietly drop the receipt a run wrote by hand against another.
+test('a receipt survives an answer written to a different question', () => {
+  const done = { ...ENTRY, id: 'q2', answer: 'no', answeredAt: '2026-08-13', acted: 'Rebuilt the picker.', actedAt: '2026-08-14' };
+  const [, q] = parseQuestions(answerIn(file(ENTRY, done), 'q1', 'kept').text);
+  assert.equal(q.acted, 'Rebuilt the picker.');
+  assert.equal(q.actedAt, '2026-08-14');
+});

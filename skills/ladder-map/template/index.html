@@ -194,6 +194,8 @@
   .ask .why, .ask .meanwhile { color: var(--muted); margin: 8px 0 0; max-width: 68ch; }
   .ask .meanwhile b { color: var(--ink); font-weight: 500; }
   .ask .answered { margin: 12px 0 0; color: var(--a); }
+  .ask .acted { color: var(--muted); margin: 6px 0 0; max-width: 68ch; }
+  .ask .acted b { color: var(--ink); font-weight: 500; }
   .ask.sending { opacity: .5; }
   .reply { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
   .reply button { font: inherit; font-size: 13px; background: none; color: var(--muted); cursor: pointer;
@@ -536,8 +538,11 @@
    * So the page states its own age, under the title, beside the commit it was refreshed at. A date
    * rather than a number because it sorts on sight and needs no changelog to interpret.
    * BUMP THIS whenever index.html changes in a way a copied board would want.
+   *
+   * A second change on the SAME DAY takes a .2 — two different boards wearing one stamp is the exact
+   * failure this string exists to catch, and it happened the first time this file was edited twice.
    */
-  const BOARD_VERSION = '2026-08-13';
+  const BOARD_VERSION = '2026-08-13.2';
   // esc lives outside the guard below — the failure message needs it and it cannot itself throw.
   const esc = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
   try {
@@ -1168,6 +1173,21 @@ snapshot can be made to look fine, so this is the part of the board that shows w
       ? `<div class="reply"><button class="fine" data-answer="kept">Fine</button><button class="overturn">Overturn</button></div>${box}`
       : box;
   };
+  /**
+   * What a run DID about the answer, and the one check this whole tab is kept on: if the first answer
+   * somebody gives does not visibly land, the page is decorative and should be deleted rather than
+   * kept for politeness. So an answer that asked for a CHANGE stays on the page until a run writes a
+   * receipt — agreeing ("kept") needs none, because nothing was asked for.
+   *
+   * Absence is printed as ABSENCE, never as blame. This page cannot know whether a run has happened
+   * at all — history.js records gradings, not sessions — so "nothing recorded against it yet" is the
+   * only sentence here that is true, and "no run has said what it did" would be an accusation the
+   * board has no evidence for.
+   */
+  const awaited = (q) => q.answer != null && q.answer !== 'kept' && !q.acted;
+  const receipt = (q) => q.acted
+    ? `<p class="acted"><b>What happened since:</b> ${esc(q.acted)}${q.actedAt ? ` · ${esc(human(q.actedAt))}` : ''}</p>`
+    : awaited(q) ? '<p class="acted none">Nothing recorded against it yet.</p>' : '';
   const askCard = (q) => `<div class="ask" data-id="${esc(q.id)}">
       <div class="head"><span class="kind">${esc(q.kind)}</span>${
         q.row === 'ALL' ? '<b>the whole board</b>' : rowBtn(q.row)}<span class="when">${esc(q.date)}</span></div>
@@ -1175,7 +1195,7 @@ snapshot can be made to look fine, so this is the part of the board that shows w
       <p class="why">${esc(q.because)}</p>
       <p class="meanwhile"><b>${q.state === 'decided' ? 'What was done anyway' : 'What happened instead'}:</b> ${esc(q.meanwhile)}</p>
       ${q.answer != null
-        ? `<p class="answered">You said <b>${esc(q.answer)}</b>${q.answeredAt ? ` · ${esc(human(q.answeredAt))}` : ''}</p>`
+        ? `<p class="answered">You said <b>${esc(q.answer)}</b>${q.answeredAt ? ` · ${esc(human(q.answeredAt))}` : ''}</p>${receipt(q)}`
         : reply(q)}</div>`;
   const renderCalls = () => {
     if (!QALL) return;
@@ -1183,7 +1203,12 @@ snapshot can be made to look fine, so this is the part of the board that shows w
     const open = openCalls();
     const waiting = open.filter((q) => q.state === 'waiting');
     const decided = open.filter((q) => q.state === 'decided').reverse();
-    const settled = QALL.filter((q) => q.answer != null).reverse();
+    // An answer that is not "kept" leaves something for somebody to do, so it does not belong in a
+    // collapsed record of things that are over. It sits in its own group until a run says what it did
+    // — the difference between a page that took the answer and a page that acted on it. The heading is
+    // the mirror of the one above it on purpose: what is waiting on her, then what is waiting on a run.
+    const asked = QALL.filter(awaited).reverse();
+    const settled = QALL.filter((q) => q.answer != null && !awaited(q)).reverse();
     // The count is what makes the tab worth glancing at, and it counts BOTH kinds: a decided entry
     // is news even though nothing is blocked on it.
     callsTab.innerHTML = `Your call${open.length ? ` <span class="n">${open.length}</span>` : ''}`;
@@ -1197,6 +1222,8 @@ Nothing here ever stopped the work — every entry says what happened while it s
         : '<p class="none">Nothing is waiting. This is the good news you came for.</p>'}
       ${decided.length ? `<h2>Decided while you were away <span class="n">${decided.length}</span></h2>
         ${decided.map(askCard).join('')}` : ''}
+      ${asked.length ? `<h2>Waiting on the next run <span class="n">${asked.length}</span></h2>
+        ${asked.map(askCard).join('')}` : ''}
       ${settled.length ? `<h2>Settled <span class="n">${settled.length}</span></h2>
         ${settled.map(askCard).join('')}` : ''}`;
   };

@@ -44,13 +44,26 @@ documents), then edit two of them:
 - **`questions.js`**, **`questions.mjs`**, **`serve.mjs`**, **`board.cmd`**, **`questions.test.mjs`** —
   copy unchanged. These are the "Your call" tab: the decisions an agent made on its own and the ones it
   could not make for the owner. `questions.js` ships empty, and the tab hides itself until there is
-  something in it. **Tell the owner to open the board by double-clicking `board.cmd`**, which starts the
-  small loopback server and opens the page — index.html opened straight from a file renders everything
-  and offers no answer buttons, because a page opened from a file may not write one. That gap is not
-  theoretical: it is how this shipped the first time, and the owner opened the board, saw no buttons and
-  asked why it was not interactive.
+  something in it. **Tell the owner to open the board by double-clicking `board.cmd`**, which works out
+  the board's numbers, starts the small loopback server and opens the page — index.html opened straight
+  from a file renders everything and offers no answer buttons, because a page opened from a file may not
+  write one. That gap is not theoretical: it is how this shipped the first time, and the owner opened the
+  board, saw no buttons and asked why it was not interactive.
+
+  **`board.cmd` runs `refresh.mjs` before it serves the page**, so a served board's staleness and its
+  census are true as of the moment it was opened rather than as of whenever anyone last ran the command
+  by hand. It costs about 1.8 seconds on a fourteen-row project, paid before the browser opens rather
+  than beside it — a board that changed its numbers under the reader would be worse than one that takes
+  a second. A board opened from a file is unchanged and still prints the date it last computed, so the
+  portability promise is intact: the server is the better door, never the required one. Anything
+  `refresh.mjs` prints is passed straight through to that window, which is why git's own noise is
+  silenced inside `refresh.mjs` and not filtered out here.
 
 Then run `node docs/quality/refresh.mjs`, open the page, and LOOK at it before reporting.
+
+`questions.test.mjs` is run with `node --test docs/quality/questions.test.mjs` — 14 cases over the
+reading, checking and answering of that file. Nothing else here has a test; this one does because the
+server writes through it. Run it after any edit to `questions.mjs`.
 
 ## Updating a board that already exists
 

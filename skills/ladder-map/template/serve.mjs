@@ -5,14 +5,15 @@
  *   node docs/quality/serve.mjs        then open the address it prints
  *
  * The board itself opens from disk with nothing running, and that promise is not being traded away
- * here: everything still renders from a file:// URL, and this exists only so the "Your call" tab can
- * write an answer back into questions.js. Node's own http, no dependencies, like everything else here.
+ * here: everything still renders from a file:// URL. Two things need a process, and both of them are
+ * things a page opened from a file may not do — write an answer back into questions.js, and ask git
+ * anything. Node's own http, no dependencies, like everything else here.
  *
  * LOOPBACK ONLY. This writes to disk when asked, so the machine it runs on is the only place that may
  * ask. Never 0.0.0.0, never a LAN address, no matter how convenient a phone would be.
  */
 import { createServer } from 'node:http';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -98,6 +99,36 @@ const openBrowser = (url) => {
     spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref();
   } catch { /* the address is printed either way */ }
 };
+/**
+ * The numbers are worked out HERE, at the moment somebody opens the board, instead of whenever
+ * anyone last remembered to type the command. It is the one thing a served board can offer that a
+ * board opened from a file cannot, and it is what makes this window worth starting for a reader who
+ * has nothing to answer. Measured at 1.8s on a fourteen-row project, and it is spent BEFORE the page
+ * is served rather than beside it: a board that opens and then changes its numbers under the reader
+ * is worse than one that takes a second, and the line above says what the second is for.
+ *
+ * A SEPARATE PROCESS whose failure is IGNORED, never folded into this file: refresh.mjs exits on a
+ * repository with no commits and on a questions.js whose entry forgot a line, and a board that will
+ * not open because of one missing sentence is a worse failure than the stale number it prevented.
+ * The board opens anyway, printing the date it last computed — the same honesty the file:// board
+ * has always had.
+ *
+ * Its complaint is HELD and printed WHENEVER THERE IS ONE, not only when it failed. The version that
+ * printed it only on a non-zero exit had swallowed the one complaint that matters most: refresh.mjs
+ * warns about an explain.js it cannot parse and then exits 0 on purpose, and hiding that on the path
+ * this change makes everybody's front door would silence the alarm whose own comment says a broken
+ * file must never be reported for months as "nobody has written these yet". git's noise is silenced
+ * at ITS source instead (see refresh.mjs), which is what makes "print everything it says" safe.
+ */
+console.log('Working out the numbers…');
+// The timeout is what makes "ignored" true. Without it a refresh that hangs — a huge repository, a
+// git credential prompt — does not degrade the board, it stops the door opening at all, which is the
+// one thing this was not allowed to do. A killed run leaves only a .tmp behind, never a torn file.
+const refreshed = spawnSync(process.execPath, [join(here, 'refresh.mjs')], { stdio: ['ignore', 'ignore', 'pipe'], timeout: 30_000 });
+if (refreshed.status !== 0) console.log('Could not work them out just now — the board opens with whatever it last computed.');
+const complaint = String(refreshed.stderr ?? '').trim();
+if (complaint) console.log(complaint);
+
 server.listen(wanted, '127.0.0.1', () => {
   const url = `http://127.0.0.1:${server.address().port}/`;
   console.log(`The board is at ${url}`);

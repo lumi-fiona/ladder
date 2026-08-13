@@ -10,7 +10,7 @@
       "name": "ladder",
       "source": "./",
       "description": "A quality ladder for a codebase: map it into parts that make promises to a person, grade one part at a time against threshold bars with staged proof, and ship a board the owner can open and read.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Lumi"
       },

@@ -245,6 +245,14 @@ there. `node refresh.mjs` refuses a file whose entry forgets to say, so the rule
 the board. Act on every answer that has arrived; an answer nobody acts on is worse than no answer,
 because it teaches the owner the page is decorative.
 
+**Then write the receipt.** Any answer other than "kept" stays on the page under *Waiting on the next
+run* — the mirror of *Waiting on you* — until the run that acted on it fills in `acted` (one plain line
+saying what it did) and `actedAt`. Until then the entry reads "nothing recorded against it yet", which
+is the true sentence: the board cannot tell whether a run has happened, so it never says one ignored
+them. Agreeing costs one click and needs no receipt, because nothing was asked for. This is the check the whole tab was agreed to live or die on
+— if the first answer somebody gives does not visibly land, the mechanism is decorative and should be
+deleted rather than kept for politeness.
+
 Answering happens on the page (`node docs/quality/serve.mjs`, then click) — never in chat, and no
 question is ever raised twice. If the same decision comes up again, add a line to the existing entry.
 

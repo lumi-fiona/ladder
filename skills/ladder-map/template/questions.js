@@ -22,6 +22,12 @@
 //   options     2–4 concrete answers, so the page can offer buttons; free text always works too
 //   answer      null until the owner says; written by serve.mjs
 //   answeredAt  the day they said it
+//   acted       what the run that read the answer DID about it — one plain line, written by that run
+//   actedAt     the day it did it
+//
+// Any answer other than "kept" stays on the page under "Waiting on the next run" until a run writes
+// `acted`. That is the whole test this tab is kept on: an answer nobody acts on is worse than no
+// answer, because it teaches the owner the page is decorative. Agreeing needs no receipt.
 //
 // To answer from the page rather than by hand: double-click board.cmd (or run `node serve.mjs`).
 // Opening index.html straight from disk shows everything but cannot save an answer, so it offers no
