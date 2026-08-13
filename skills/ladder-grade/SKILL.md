@@ -36,6 +36,10 @@ for a famous song is ordinary use. Feeding it a malformed URL is not.
 
 ## Procedure
 
+0. **Read `questions.js` before anything else** and act on every answer that has arrived since the
+   last run — see *Your call* below. An answer nobody acts on teaches the owner that the page is
+   decorative, and then the surface is worth nothing.
+
 1. **Set the scene.** Read the row in `ladder.js` — its promise, its `parts`, its `exams`. Run
    `node docs/quality/refresh.mjs`. Note whether the app is running and how to reach it.
 
@@ -209,6 +213,40 @@ effect only when the owner acknowledges it.** Record every change either way.
 **Always name ONE next action.** A menu hands the deciding back — to the agent as much as to the
 owner. The first unfinished step of the roadmap's order IS the answer. The same rule governs how you
 talk: end with a recommendation and an easy correction, never with a list of options to weigh.
+
+## Your call: the decisions that are not yours, written down instead of asked
+
+The same contract as the one above, widened past targets, and living in `questions.js` behind the
+board's fourth tab. It exists because of a measured shape: over a seven-hour session the interruptions
+were not the problem — four in seven hours — but the **taste calls got made silently** (whether a live
+channel should be shareable at all was decided, implemented and mentioned in passing), the one
+question that could not be measured **stopped the work**, and the permission question was never asked
+because asking felt like an interruption, so it became an accident instead.
+
+**Three kinds may be written, and nothing else.**
+
+- **Taste** — what the thing is and is not.
+- **Judgment** — where measuring was tried and does not settle it. The entry must say WHAT was
+  measured, or it is a lazy question wearing a hard one's clothes.
+- **Permission** — it touches the owner's property: their machine, their repository, their
+  uncommitted work.
+
+**Never priority.** "Which should I do first" is the one question the board was built to answer, and
+a queue of them puts the owner back in the loop the roadmap took them out of. **Never anything one
+cheap probe settles** — that is avoidance, not a question.
+
+**Every entry names what happened MEANWHILE, and that is what makes it safe.** A question here is a
+note, never a gate. A `decided` entry says what was built and silence is agreement; a `waiting` one
+says what is on hold and what was done instead. Nothing in a session ever waits for an answer — if a
+run genuinely cannot proceed without one, say so in the report and END the run rather than sitting
+there. `node refresh.mjs` refuses a file whose entry forgets to say, so the rule has teeth.
+
+**Answers are read FIRST, at the start of every run**, before grading, before fixing, before reading
+the board. Act on every answer that has arrived; an answer nobody acts on is worse than no answer,
+because it teaches the owner the page is decorative.
+
+Answering happens on the page (`node docs/quality/serve.mjs`, then click) — never in chat, and no
+question is ever raised twice. If the same decision comes up again, add a line to the existing entry.
 
 ## A is earned by a SECOND look, never by the session that did the work
 

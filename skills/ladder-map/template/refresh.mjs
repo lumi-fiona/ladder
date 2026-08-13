@@ -13,6 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseQuestions, checkQuestions } from './questions.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 /**
@@ -43,6 +44,25 @@ try {
 } catch {
   fail('This repository has no commits yet, so there is nothing a grade could be measured against.\nMake one commit, then run this again.');
 }
+/**
+ * The questions file gets checked HERE because this is the command the skill already tells everyone
+ * to run after an edit — a rule with nowhere to bite is a suggestion. The one that matters is
+ * `meanwhile`: without it a question is a stop sign, which is the exact failure this surface exists
+ * to prevent. A MISSING file is a state, not a failure (boards mapped before "Your call" have none);
+ * a present one that will not parse is a failure, because the page would silently lose the tab.
+ */
+const qfile = join(here, 'questions.js');
+if (existsSync(qfile)) {
+  let list;
+  try {
+    list = parseQuestions(readFileSync(qfile, 'utf8'));
+  } catch (e) {
+    fail(`questions.js is present but did not parse — ${e.message}`);
+  }
+  const complaint = checkQuestions(list);
+  if (complaint) fail(`questions.js: ${complaint}\nNothing was written. Fix that entry and run this again.`);
+}
+
 const changedSince = (commit, paths) =>
   git(['diff', '--name-only', `${commit}..HEAD`, '--', ...paths]).split('\n').filter(Boolean);
 const probeAt = process.argv.indexOf('--probe');

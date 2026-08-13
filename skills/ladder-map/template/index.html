@@ -159,6 +159,7 @@
                   border: 1px solid transparent; border-radius: 999px; padding: 5px 14px; }
   .views button:hover { color: var(--ink); }
   .views button[aria-pressed="true"] { color: var(--ink); border-color: var(--line); background: var(--panel); }
+  .views button .n { font-family: var(--mono); font-size: 11px; color: var(--recheck); margin-left: 5px; }
   .roadmap { max-width: 860px; }
   .roadmap > .lede { color: var(--muted); margin: 0 0 30px; white-space: pre-wrap; }
   .theme { border-top: 1px solid var(--line); padding: 22px 0; }
@@ -173,6 +174,29 @@
              border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; color: var(--muted);
              white-space: nowrap; flex: none; }
   .rowlink:hover { color: var(--ink); border-color: var(--muted); }
+  /* YOUR CALL — a briefing, not a form. The question reads first and the buttons stay quiet: most
+     entries here are decisions already made, and a page of pending-looking controls would turn a
+     record of what happened into a pile of homework. */
+  .calls h2 { font-family: var(--serif); font-weight: 500; font-size: 21px; margin: 34px 0 0; }
+  .calls h2 .n { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-left: 8px; }
+  .calls .none { color: var(--muted); margin: 10px 0 0; }
+  .calls code { font-family: var(--mono); font-size: 12px; }
+  .ask .when { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .ask { border-top: 1px solid var(--line); padding: 20px 0; }
+  .ask .head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .ask h3 { font-family: var(--serif); font-weight: 500; font-size: 19px; margin: 10px 0 0; max-width: 62ch; }
+  .ask .why, .ask .meanwhile { color: var(--muted); margin: 8px 0 0; max-width: 68ch; }
+  .ask .meanwhile b { color: var(--ink); font-weight: 500; }
+  .ask .answered { margin: 12px 0 0; color: var(--a); }
+  .ask.sending { opacity: .5; }
+  .reply { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .reply button { font: inherit; font-size: 13px; background: none; color: var(--muted); cursor: pointer;
+                  border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; }
+  .reply button:hover { color: var(--ink); border-color: var(--muted); }
+  .reply .fine { color: var(--ink); border-color: var(--muted); }
+  .reply .free { font: inherit; font-size: 13px; background: var(--panel-2); color: var(--ink);
+                 border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; min-width: 220px; }
+  .reply .err { color: var(--recheck); font-size: 13px; }
   .order { border-top: 1px solid var(--line); padding: 22px 0 0; }
   .order ol { padding-left: 20px; }
   .order li { margin: 0 0 12px; }
@@ -460,6 +484,9 @@
     <button id="tab-board" aria-pressed="true">Where things stand</button>
     <button id="tab-plan" aria-pressed="false">What to do</button>
     <button id="tab-moved" aria-pressed="false">What's moved</button>
+    <!-- Hidden until questions.js exists: a board copied before this tab did should not offer an
+         empty room. It is LAST because it is the only one addressed to the owner personally. -->
+    <button id="tab-calls" aria-pressed="false" hidden>Your call</button>
   </div>
   <!-- THE RECORD, then what is still open, in that order — and the order is the whole idea. Two
        shapes have stood here before: a progress bar pinned at 0% for months by design, and a pair
@@ -477,7 +504,7 @@
   </div>
   </div>
 </header>
-<main class="wrap"><section class="compare" id="compare" hidden></section><div class="legend" id="legend" hidden><span class="g0">where it should be</span><span class="g1">one step short</span><span class="g2">two steps short</span><span class="g3">three steps short</span></div><p class="keys" id="keys" hidden><span><b>C</b> it works · <b>B</b> nothing a person would meet in ordinary use is wrong · <b>A</b> it survived someone actively trying to break it · <b>S</b> the crown, and only you can grant it</span><span>Every part carries both letters: <b>feels</b> is what it is like to use, <b>guts</b> is how the code underneath holds up. A <b>re-check</b> is somebody grading a part again — the only thing that ever moves a letter.</span></p><div class="board" id="board"></div><div class="roadmap" id="roadmap" hidden></div><div class="roadmap" id="moved" hidden></div><div id="part" hidden></div></main>
+<main class="wrap"><section class="compare" id="compare" hidden></section><div class="legend" id="legend" hidden><span class="g0">where it should be</span><span class="g1">one step short</span><span class="g2">two steps short</span><span class="g3">three steps short</span></div><p class="keys" id="keys" hidden><span><b>C</b> it works · <b>B</b> nothing a person would meet in ordinary use is wrong · <b>A</b> it survived someone actively trying to break it · <b>S</b> the crown, and only you can grant it</span><span>Every part carries both letters: <b>feels</b> is what it is like to use, <b>guts</b> is how the code underneath holds up. A <b>re-check</b> is somebody grading a part again — the only thing that ever moves a letter.</span></p><div class="board" id="board"></div><div class="roadmap" id="roadmap" hidden></div><div class="roadmap" id="moved" hidden></div><div class="roadmap calls" id="calls" hidden></div><div id="part" hidden></div></main>
 <script src="ladder.js"></script>
 <!-- explain.js is SEPARATE from ladder.js on purpose: it is the only file here holding paragraphs,
      and one stray backtick in ladder.js blanks the entire board. Here it loses only the writing. -->
@@ -488,6 +515,9 @@
      would race it. A fresh map ships the empty version rather than 404-ing on its first day. -->
 <script src="roadmap.js"></script>
 <script src="history.js"></script>
+<!-- questions.js is the one file here the OWNER writes into, through serve.mjs. Loaded last and
+     read defensively: a board that predates it simply has no fourth tab. -->
+<script src="questions.js"></script>
 <script>
   /**
    * THE VERSION OF THIS PAGE — the board itself, never the project's data.
@@ -501,7 +531,7 @@
    * rather than a number because it sorts on sight and needs no changelog to interpret.
    * BUMP THIS whenever index.html changes in a way a copied board would want.
    */
-  const BOARD_VERSION = '2026-08-12';
+  const BOARD_VERSION = '2026-08-13';
   // esc lives outside the guard below — the failure message needs it and it cannot itself throw.
   const esc = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
   try {
@@ -517,6 +547,18 @@
   // grading, it is a row watching nothing while its files fall into the census as if unclaimed.
   for (const r of L.rows) { r.feels ||= {}; r.guts ||= {}; r.field ||= {}; r.parts ||= []; }
   const ORDER = { C: 0, B: 1, A: 2 };
+
+  /**
+   * YOUR CALL — the decisions this board is holding for its owner. Read here rather than at the
+   * bottom because the board's own row lines carry a mark for it, and they are built long before the
+   * fourth tab renders. A board copied before this file existed has no window.QUESTIONS and simply
+   * has no fourth tab: the alternative is offering an empty room nobody put anything in.
+   */
+  const QALL = Array.isArray(window.QUESTIONS) ? window.QUESTIONS : null;
+  const openCalls = () => (QALL ?? []).filter((q) => q.answer == null);
+  // Only WAITING marks a row. A decided entry is a briefing, not a demand on that part — putting it
+  // on the line would turn "the agent decided something here" into a to-do the owner cannot finish.
+  const waitingRows = new Set((QALL ?? []).filter((q) => q.state === 'waiting' && q.answer == null).map((q) => q.row));
 
   // A letter outside the scale silently loses every comparison below (undefined <= 2 is false).
   // The spec plans an A+ "for one line" — forgetting that line should be loud, so say it once.
@@ -918,7 +960,11 @@
         ${letter(row.feels, letterState(row, 'feels'))}${letter(row.guts, letterState(row, 'guts'))}
         <span class="goal">${row.target ? esc(GOAL[row.target] ?? row.target) : '<span class="unset">not set</span>'}</span>
         <span class="promise">${esc(row.promise ?? '')}</span>
-        <span class="state">${esc(stateLine(row))}${flags.length ? ` <em>${esc(flags.join(' · '))}</em>` : ''}</span>`;
+        <span class="state">${esc(stateLine(row))}${flags.length ? ` <em>${esc(flags.join(' · '))}</em>` : ''}${
+          waitingRows.has(row.id) ? ' <em class="wait">waiting on you</em>' : ''}</span>`;
+      // Its own element, not another string in `flags`, so answering the question can take the mark
+      // off this line without re-rendering the board underneath the reader.
+      line.dataset.row = row.id;
       // The feels/guts headers are visual only — they sit once above the list, not on every row — so
       // without this a screen reader reads two bare capital letters in the middle of a sentence.
       // Same for the goal: "solid" alone in a row of letters is not a sentence.
@@ -1093,7 +1139,111 @@ snapshot can be made to look fine, so this is the part of the board that shows w
     });
   }
 
-  const tabs = { board: document.getElementById('tab-board'), plan: document.getElementById('tab-plan'), moved: document.getElementById('tab-moved') };
+  /**
+   * The fourth view. Two states and they read differently on purpose: a DECIDED entry says what was
+   * built and offers one click to agree, a WAITING one says what is on hold and what was done
+   * instead. Every entry carries `meanwhile`, which is the whole contract — nothing here ever
+   * stopped anybody, so this page is a record first and an inbox second.
+   */
+  const callsTab = document.getElementById('tab-calls');
+  const callsEl = document.getElementById('calls');
+  // Answering WRITES A FILE, which a page opened from disk cannot do. It still renders there — the
+  // record is the bigger half of this — and says in one line how to make it answerable.
+  const canAnswer = location.protocol === 'http:' || location.protocol === 'https:';
+  const reply = (q) => {
+    if (!canAnswer) return '';
+    const opts = (q.options ?? []).map((o) => `<button class="opt" data-answer="${esc(o)}">${esc(o)}</button>`).join('');
+    const box = `<div class="reply"${q.state === 'decided' ? ' hidden' : ''}>${opts}
+      <input class="free" maxlength="400" placeholder="or say it your way">
+      <button class="send">Send</button></div>`;
+    // A decided entry opens with the cheap answer, because agreeing is what usually happens and it
+    // should cost one click. The options only appear once somebody means to overturn it.
+    return q.state === 'decided'
+      ? `<div class="reply"><button class="fine" data-answer="kept">Fine</button><button class="overturn">Overturn</button></div>${box}`
+      : box;
+  };
+  const askCard = (q) => `<div class="ask" data-id="${esc(q.id)}">
+      <div class="head"><span class="kind">${esc(q.kind)}</span>${
+        q.row === 'ALL' ? '<b>the whole board</b>' : rowBtn(q.row)}<span class="when">${esc(q.date)}</span></div>
+      <h3>${esc(q.asks)}</h3>
+      <p class="why">${esc(q.because)}</p>
+      <p class="meanwhile"><b>${q.state === 'decided' ? 'What was done anyway' : 'What happened instead'}:</b> ${esc(q.meanwhile)}</p>
+      ${q.answer != null
+        ? `<p class="answered">You said <b>${esc(q.answer)}</b>${q.answeredAt ? ` · ${esc(human(q.answeredAt))}` : ''}</p>`
+        : reply(q)}</div>`;
+  const renderCalls = () => {
+    if (!QALL) return;
+    callsTab.hidden = false;
+    const open = openCalls();
+    const waiting = open.filter((q) => q.state === 'waiting');
+    const decided = open.filter((q) => q.state === 'decided').reverse();
+    const settled = QALL.filter((q) => q.answer != null).reverse();
+    // The count is what makes the tab worth glancing at, and it counts BOTH kinds: a decided entry
+    // is news even though nothing is blocked on it.
+    callsTab.innerHTML = `Your call${open.length ? ` <span class="n">${open.length}</span>` : ''}`;
+    callsEl.innerHTML = `<p class="lede">Decisions this board made on its own, and the ones it could not make for you.
+Nothing here ever stopped the work — every entry says what happened while it stood.${
+      canAnswer ? '' : ' <b>Run <code>node serve.mjs</code> in this folder to answer from the page.</b>'}</p>
+      <h2>Waiting on you <span class="n">${waiting.length}</span></h2>
+      ${waiting.length ? waiting.map(askCard).join('')
+        : '<p class="none">Nothing is waiting. This is the good news you came for.</p>'}
+      ${decided.length ? `<h2>Decided while you were away <span class="n">${decided.length}</span></h2>
+        ${decided.map(askCard).join('')}` : ''}
+      ${settled.length ? `<h2>Settled <span class="n">${settled.length}</span></h2>
+        ${settled.map(askCard).join('')}` : ''}`;
+  };
+  const sendAnswer = async (id, answer, card) => {
+    card.classList.add('sending');
+    try {
+      const r = await fetch('/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, answer }) });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(out.error ?? `the server answered ${r.status}`);
+      const q = QALL.find((x) => x.id === id);
+      q.answer = answer;
+      q.answeredAt = new Date().toLocaleString('sv').slice(0, 10);
+      // The mark on the board's own row line goes when the LAST waiting question about that part
+      // does, not when any one of them is answered.
+      if (!openCalls().some((x) => x.state === 'waiting' && x.row === q.row)) {
+        for (const el of document.querySelectorAll('.line .state em.wait')) {
+          if (el.closest('.line').dataset.row === q.row) el.remove();
+        }
+      }
+      renderCalls();
+    } catch (err) {
+      // The answer did NOT land, so the card must not look answered. Says what the server said.
+      card.classList.remove('sending');
+      const box = [...card.querySelectorAll('.reply')].find((el) => !el.hidden) ?? card;
+      box.querySelector('.err')?.remove();
+      box.insertAdjacentHTML('beforeend', `<span class="err">${esc(err.message)}</span>`);
+    }
+  };
+  callsEl.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.classList.contains('rowlink')) {
+      const row = L.rows.find((r) => r.id === b.dataset.row);
+      return void (row && openPart(row, b));
+    }
+    const card = b.closest('.ask');
+    if (!card) return;
+    if (b.classList.contains('overturn')) {
+      const box = [...card.querySelectorAll('.reply')].pop();
+      box.hidden = false;
+      box.querySelector('.free').focus();
+      return;
+    }
+    const answer = (b.dataset.answer ?? (b.classList.contains('send') ? card.querySelector('.free').value : '')).trim();
+    if (answer) sendAnswer(card.dataset.id, answer, card);
+  });
+  // Enter sends, because a one-line answer typed into a box wants one key, not a hunt for a button.
+  callsEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !e.target.classList.contains('free')) return;
+    const answer = e.target.value.trim();
+    if (answer) sendAnswer(e.target.closest('.ask').dataset.id, answer, e.target.closest('.ask'));
+  });
+  renderCalls();
+
+  const tabs = { board: document.getElementById('tab-board'), plan: document.getElementById('tab-plan'), moved: document.getElementById('tab-moved'), calls: document.getElementById('tab-calls') };
   const legend = document.getElementById('legend');
   legend.hidden = !L.rows.some((r) => gapOf(r) !== null); // only means something once expectations exist
   const legendOn = !legend.hidden;
@@ -1114,6 +1264,7 @@ snapshot can be made to look fine, so this is the part of the board that shows w
     compare.hidden = !compareOn || which !== 'board';
     plan.hidden = which !== 'plan';
     movedEl.hidden = which !== 'moved';
+    callsEl.hidden = which !== 'calls';
     partEl.hidden = which !== 'part';
     masthead.hidden = which === 'part';
     for (const [k, el] of Object.entries(tabs)) el.setAttribute('aria-pressed', String(k === which));
