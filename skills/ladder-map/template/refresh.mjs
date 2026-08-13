@@ -11,12 +11,38 @@
 // nothing, which reads as "everything is clean forever".
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const root = resolve(here, '..', '..');
+/**
+ * ASK git where the root is; never count directories up from this file.
+ *
+ * It used to be `resolve(here, '..', '..')` — correct for `docs/quality/` and wrong for every other
+ * placement, while the skill that installs this file says in as many words "or wherever the project
+ * keeps documents". One level up instead of two and git ran outside the repository, which is the
+ * failure the comment at the top of this file warns about: paths match nothing and the board reads
+ * as everything-is-clean-forever. Asking removes the trap instead of documenting it.
+ *
+ * The two refusals below exist because this script is the FIRST command the mapping skill tells a
+ * new user to run, and both of these states used to end in `Error: Command failed` over thirty
+ * lines of node internals. One of them — a repository with no commits yet — is exactly the state a
+ * project is in on the day somebody reaches for a skill whose whole pitch is day one.
+ */
+const fail = (msg) => { console.error(msg); process.exit(1); };
+let root;
+try {
+  root = execFileSync('git', ['rev-parse', '--show-toplevel'],
+    { cwd: here, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+} catch {
+  fail(`${here} is not inside a git repository.\nEverything this script writes is read out of git history, so there is nothing here for it to compute.`);
+}
 const git = (args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+try {
+  execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, stdio: 'ignore' });
+} catch {
+  fail('This repository has no commits yet, so there is nothing a grade could be measured against.\nMake one commit, then run this again.');
+}
 const changedSince = (commit, paths) =>
   git(['diff', '--name-only', `${commit}..HEAD`, '--', ...paths]).split('\n').filter(Boolean);
 const probeAt = process.argv.indexOf('--probe');
