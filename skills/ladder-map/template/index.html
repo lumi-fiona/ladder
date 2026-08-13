@@ -180,7 +180,13 @@
   .calls h2 { font-family: var(--serif); font-weight: 500; font-size: 21px; margin: 34px 0 0; }
   .calls h2 .n { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-left: 8px; }
   .calls .none { color: var(--muted); margin: 10px 0 0; }
-  .calls code { font-family: var(--mono); font-size: 12px; }
+  .calls code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+  /* Loud on purpose: the first version said this in a clause at the end of a paragraph, and the
+     owner opened the page, saw no buttons, and asked why it was not interactive. */
+  .calls .offline { border-left: 2px solid var(--recheck); padding: 12px 0 12px 14px; margin: 0 0 10px;
+                    color: var(--muted); max-width: 68ch; }
+  .calls .offline b { color: var(--ink); font-weight: 500; display: block; margin-bottom: 4px; }
+  .calls .offline span { display: block; margin-top: 8px; color: var(--ink); }
   .ask .when { font-family: var(--mono); font-size: 12px; color: var(--dim); }
   .ask { border-top: 1px solid var(--line); padding: 20px 0; }
   .ask .head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
@@ -1182,8 +1188,10 @@ snapshot can be made to look fine, so this is the part of the board that shows w
     // is news even though nothing is blocked on it.
     callsTab.innerHTML = `Your call${open.length ? ` <span class="n">${open.length}</span>` : ''}`;
     callsEl.innerHTML = `<p class="lede">Decisions this board made on its own, and the ones it could not make for you.
-Nothing here ever stopped the work — every entry says what happened while it stood.${
-      canAnswer ? '' : ' <b>Run <code>node serve.mjs</code> in this folder to answer from the page.</b>'}</p>
+Nothing here ever stopped the work — every entry says what happened while it stood.</p>
+      ${canAnswer ? '' : `<div class="offline"><b>You are reading this from a file, so the answer buttons are not here.</b>
+        A page opened from a file is not allowed to write one, and an answer has to be written down.
+        <span>Double-click <code>board.cmd</code> in this folder — or run <code>node serve.mjs</code> — and the same page opens with its buttons.</span></div>`}
       <h2>Waiting on you <span class="n">${waiting.length}</span></h2>
       ${waiting.length ? waiting.map(askCard).join('')
         : '<p class="none">Nothing is waiting. This is the good news you came for.</p>'}

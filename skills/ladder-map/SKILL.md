@@ -41,11 +41,14 @@ documents), then edit two of them:
   with no server and no build, and names itself from `ladder.project`. `roadmap.js` ships empty on
   purpose: it fills in only once a project has been graded, and shipping it empty is what stops a
   correct first day from throwing a missing-file error.
-- **`questions.js`**, **`questions.mjs`**, **`serve.mjs`**, **`questions.test.mjs`** — copy unchanged.
-  These are the "Your call" tab: the decisions an agent made on its own and the ones it could not make
-  for the owner. `questions.js` ships empty, and the tab hides itself until there is something in it.
-  `serve.mjs` is the only part of this board that needs a server, and it is needed only to ANSWER —
-  `node docs/quality/serve.mjs`, loopback only, no dependencies.
+- **`questions.js`**, **`questions.mjs`**, **`serve.mjs`**, **`board.cmd`**, **`questions.test.mjs`** —
+  copy unchanged. These are the "Your call" tab: the decisions an agent made on its own and the ones it
+  could not make for the owner. `questions.js` ships empty, and the tab hides itself until there is
+  something in it. **Tell the owner to open the board by double-clicking `board.cmd`**, which starts the
+  small loopback server and opens the page — index.html opened straight from a file renders everything
+  and offers no answer buttons, because a page opened from a file may not write one. That gap is not
+  theoretical: it is how this shipped the first time, and the owner opened the board, saw no buttons and
+  asked why it was not interactive.
 
 Then run `node docs/quality/refresh.mjs`, open the page, and LOOK at it before reporting.
 

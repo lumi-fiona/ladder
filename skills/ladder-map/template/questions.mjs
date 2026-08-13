@@ -80,7 +80,9 @@ export const HEADER = `// Questions the board is holding for its owner — see i
 //   answer      null until the owner says; written by serve.mjs
 //   answeredAt  the day they said it
 //
-// To answer from the page rather than by hand: node serve.mjs
+// To answer from the page rather than by hand: double-click board.cmd (or run \`node serve.mjs\`).
+// Opening index.html straight from disk shows everything but cannot save an answer, so it offers no
+// buttons — a page opened from a file is not allowed to write one.
 `;
 
 // The file is REWRITTEN whole rather than patched in place: a regex over hand-written JS is a way to

@@ -12,6 +12,7 @@
  * ask. Never 0.0.0.0, never a LAN address, no matter how convenient a phone would be.
  */
 import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -84,7 +85,23 @@ server.on('error', (e) => {
   console.log(`port ${wanted} is taken — picking another`);
   server.listen(0, '127.0.0.1');
 });
+/**
+ * It opens the page itself, because the version that did not was the whole feature failing.
+ * Everything worked — the tab, the buttons, the writing — and the owner opened index.html the way
+ * anyone opens a file, saw a page with no buttons on it, and asked why it was not interactive. A
+ * command somebody has to remember is a door that is locked. --no-open is there for scripts.
+ */
+const openBrowser = (url) => {
+  const [cmd, args] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]]
+    : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+  try {
+    spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref();
+  } catch { /* the address is printed either way */ }
+};
 server.listen(wanted, '127.0.0.1', () => {
-  console.log(`The board is at http://127.0.0.1:${server.address().port}/`);
+  const url = `http://127.0.0.1:${server.address().port}/`;
+  console.log(`The board is at ${url}`);
   console.log(`Answers are written to ${QFILE}`);
+  console.log('Leave this window open while you use it. Ctrl+C when you are done.');
+  if (!process.argv.includes('--no-open')) openBrowser(url);
 });
