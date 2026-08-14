@@ -173,8 +173,9 @@ Everything else stays empty, **including `target`** — an expectation before th
 cost, and "should be excellent" printed beside two blank letters is the closest this row can come to
 looking graded. Same for `explain.js` (only a real check may write one), `next` (it is the floor above
 a grade, and there is no grade) and `exams` (a check earns its place by catching a defect). Add one
-`history.js` entry, `kind: 'mapped'` — no new kind is needed; what happened is that a part went on the
-board.
+`history.js` entry, **`kind: 'promised'`**, which the board prints as *promised, not built yet* — it is
+its own word rather than a reuse of `mapped`, because mapping divides a project into parts and this is
+a different event that reads as a lie in the other's vocabulary.
 
 **Say out loud what the row does to the front page, before you add it.** An ungraded row counts.
 Measured on a fully-graded 14-row board: adding one flipped the headline from *"Every part of Lumify

@@ -119,7 +119,7 @@
   @keyframes mark-in { from { opacity: 0; transform: scaleY(.3); } }
   @media (prefers-reduced-motion: reduce) { .marks i { animation: none; } }
   .k-fixed { background: var(--a); } .k-described { background: var(--b); }
-  .k-graded, .k-mapped { background: var(--u); } .k-regraded { background: var(--s); }
+  .k-graded, .k-mapped, .k-promised { background: var(--u); } .k-regraded { background: var(--s); }
   .k-rechecked { background: var(--a); box-shadow: inset 0 0 0 1px var(--bg), 0 0 0 1px var(--a); }
   .k-expected { background: var(--c); }
   /* The swatch is its own element. The `k-` classes set a BACKGROUND, so hanging them on the legend
@@ -542,7 +542,7 @@
    * A second change on the SAME DAY takes a .2 — two different boards wearing one stamp is the exact
    * failure this string exists to catch, and it happened the first time this file was edited twice.
    */
-  const BOARD_VERSION = '2026-08-13.2';
+  const BOARD_VERSION = '2026-08-14';
   // esc lives outside the guard below — the failure message needs it and it cannot itself throw.
   const esc = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
   try {
@@ -738,7 +738,11 @@
   // second copy was written for the day strip in the masthead — caught the moment the page went
   // blank ("Identifier 'KIND_WORD' has already been declared"), which is the friendly version of
   // the failure two copies of a vocabulary usually cause.
-  const KIND_WORD = { mapped: 'divided into parts', graded: 'checked', regraded: 'grade changed', rechecked: 're-checked, letters held', fixed: 'fixed', expected: 'expectation set', described: 'written up' };
+  // `promised` is its own word rather than a reuse of `mapped`: mapping divides a project into parts,
+  // and putting one unbuilt part on the board is a different event that reads as a lie in the other's
+  // vocabulary. It shares mapped's colour because it belongs to the same family — something arrived
+  // on the board carrying no letter.
+  const KIND_WORD = { mapped: 'divided into parts', promised: 'promised, not built yet', graded: 'checked', regraded: 'grade changed', rechecked: 're-checked, letters held', fixed: 'fixed', expected: 'expectation set', described: 'written up' };
   /** Repairs recorded against this row since the last time anyone graded or re-checked it. */
   const unverified = (row) => {
     let last = -1;

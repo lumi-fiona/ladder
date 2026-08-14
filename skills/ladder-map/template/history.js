@@ -3,6 +3,9 @@
 // one part of the board that cannot be, which is the only reason it is worth reading.
 //
 // kind: 'mapped'    the project was divided into parts (this file starts with one of these)
+//     | 'promised'  a part went on the board BEFORE its code existed — see ladder-map's
+//                   "A part nobody has built yet". Its own word rather than a second use of
+//                   'mapped', which means something else and would read as a lie here.
 //     | 'graded'    a part got its letters for the first time
 //     | 'regraded'  letters changed — `from` says what they were
 //     | 'rechecked' re-verified after a repair and the letters HELD. The payoff of the whole loop,
