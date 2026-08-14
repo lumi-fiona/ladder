@@ -42,6 +42,8 @@ for a famous song is ordinary use. Feeding it a malformed URL is not.
 
 1. **Set the scene.** Read the row in `ladder.js` — its promise, its `parts`, its `exams`. Run
    `node docs/quality/refresh.mjs`. Note whether the app is running and how to reach it.
+   **A row with an empty `parts` was promised before its code existed** — grade it against the promise
+   AS WRITTEN, and read ladder-map's *A part nobody has built yet* before rewriting a word of it.
 
 2. **Re-run the row's standing exams first** (see below). They are the checks earlier grades earned
    by catching real defects. A failure here is a finding before you have looked at anything else.

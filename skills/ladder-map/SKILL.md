@@ -1,6 +1,6 @@
 ---
 name: ladder-map
-description: Set up a quality ladder for a codebase on day one — map the project into parts with promises, census the code nobody is watching, and ship a board the owner can open. Deliberately grades NOTHING. Use when a project has no docs/quality/ yet, or when someone asks for an overview of what a codebase contains and whether any of it is being neglected.
+description: Set up a quality ladder for a codebase on day one — map the project into parts with promises, census the code nobody is watching, and ship a board the owner can open. Deliberately grades NOTHING. Use when a project has no docs/quality/ yet, when someone asks for an overview of what a codebase contains and whether any of it is being neglected, or when a feature is about to be built that the board has never heard of.
 ---
 
 # Mapping a project, before anything is graded
@@ -137,6 +137,72 @@ same sentence true on both halves — one system, one contract, a hundred files 
 write the size into its `notes`, because its first grade will only reach part of it and will have to
 say so. Splitting one promise to make the board look even is the same lie as inventing a part to
 make the census look smaller.
+
+## A part nobody has built yet
+
+Somebody is about to build something the board has never heard of. On the first project a whole
+feature — films and series, watched together with one other person — was scoped, argued and
+deliberately deferred with a list of what it would need later. All of that went into a design
+document, and two weeks on the board still showed fourteen parts and no sign the feature existed as
+an intention.
+
+Write ONE ROW and nothing else:
+
+- **`promise`** — the sentence a person would use to say it broke. Written while the thing is still an
+  idea, it says what the feature is FOR instead of describing whatever got built, and that is the
+  entire reason to come here early. **Make it able to break the way the feature will actually break**:
+  the first draft of that films-and-series promise named being in step and remembering where you got
+  to, while the honest risk was that half the files would not play at all — so the row could have
+  reached its top grade with the feature unusable.
+- **`parts: []`** — empty, even though you know the paths. A path joins `parts` the day its file is
+  committed: the board already has a word for a listed path that is not in the tree, and it prints
+  **"3 files gone"**, which means somebody deleted or renamed a part. A planned row would ship wearing
+  a fault it never earned. Empty says the true thing on its own (*watches no files*).
+- **`notes`** — the day the promise was written, that nothing here exists yet, and **the day this row
+  gets deleted if nothing has been built by then**. Name the date. Nothing on this board can age an
+  ungraded row — the "not looked at in N days" mark reads the two grade dates and there are none — so
+  without that line, "delete it if it never happens" is a rule with nowhere to bite.
+- **`field.best` and `field.trade`**, dated, fetched today: what the best existing thing does, and how
+  ours would differ. Before a build this is the most valuable thing on the page, because it is the one
+  part of a grade that needs no code to be true. Write it in the conditional — *would arrive without a
+  catalogue*, never *has no catalogue*. Leave **`field.standing`** empty: ahead, level and behind are
+  claims about something that runs, and the front page gathers every one of them under *how this
+  compares to everything else out there*.
+
+Everything else stays empty, **including `target`** — an expectation before the code is a guess about
+cost, and "should be excellent" printed beside two blank letters is the closest this row can come to
+looking graded. Same for `explain.js` (only a real check may write one), `next` (it is the floor above
+a grade, and there is no grade) and `exams` (a check earns its place by catching a defect). Add one
+`history.js` entry, `kind: 'mapped'` — no new kind is needed; what happened is that a part went on the
+board.
+
+**Say out loud what the row does to the front page, before you add it.** An ungraded row counts.
+Measured on a fully-graded 14-row board: adding one flipped the headline from *"Every part of Lumify
+has now been looked at."* to *"14 of 15 parts have been looked at so far."*, and the big number from
+*14 parts checked* to *14 of 15*. That is true and it is the price of saying the feature exists. It is
+the owner's call, so tell them in the same breath as the promise — and if they would rather keep the
+headline, the row waits for the first commit while the questions go in today.
+
+Then write down the calls the build would otherwise make silently, in `questions.js`. Each one needs
+its `state` and its `meanwhile`, or `refresh.mjs` refuses the whole file and writes nothing.
+
+### While it is being built
+
+Add each file to `parts` in the commit that creates it. A file no part claims voids every promise
+above it, and a half-built feature is the easiest way there is to grow one. One command checks it: run
+`node docs/quality/refresh.mjs` at the end of a building session, and the count of unwatched files
+must not be higher than when it started.
+
+### The first grade
+
+It reads the promise **as it was written** and does not tidy it. Where what shipped promises something
+else, say so in the proof in one line, and only then rewrite the sentence — keeping the old one in
+`notes` with its date. A promise quietly edited to match the code is not a promise, it is a
+description, and every grade taken against it afterwards measures nothing.
+
+If nobody has built it by the date in `notes`, delete the row, answer the questions it raised, and add
+one history line saying so. The board is a record of what is being looked after, not of what was
+intended.
 
 ## The census is the point
 
